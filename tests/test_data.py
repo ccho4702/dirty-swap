@@ -56,6 +56,30 @@ class DatasetTests(unittest.TestCase):
             self.assertEqual(rows[0]["gold"], "4")
             self.assertEqual(rows[0]["id"], "aime25-1")
 
+    def test_math500_jsonl_adapter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "inputs" / "math500" / "test-revision"
+            root.mkdir(parents=True)
+            (root / "test.jsonl").write_text(
+                json.dumps({
+                    "unique_id": "test/algebra/1.json",
+                    "problem": "What is 2 + 2?",
+                    "answer": "4",
+                    "solution": "\\boxed{4}",
+                    "subject": "Algebra",
+                    "level": 1,
+                }) + "\n"
+            )
+            manifest = {"math500": {"revision": "test-revision", "files": {"test.jsonl": "a"}}}
+            with patch("dirty_swapping.data.sources", return_value=manifest), patch(
+                "dirty_swapping.data.file_digest", return_value="a"
+            ):
+                rows = list(raw_rows(directory, "math500", 18))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["id"], "math500-test/algebra/1.json")
+            self.assertEqual(rows[0]["gold"], "4")
+            self.assertEqual(rows[0]["answer_format"], "math")
+
     def test_gpqa_main_adapter_and_deterministic_shuffle(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "inputs" / "gpqa" / "test-revision"

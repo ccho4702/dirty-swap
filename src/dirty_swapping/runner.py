@@ -12,6 +12,7 @@ import subprocess
 import threading
 import time
 import uuid
+from collections import Counter
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -224,6 +225,9 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
         "seed": case_seed,
         "prediction": prediction,
         "correct": bool(correct),
+        "answer_extracted": prediction is not None,
+        "thinking_complete": backend.reasoning_end(state) is not None,
+        "eos_ended": backend.finished(state),
         "answer_text": answer_text,
         "generated_text": backend.tokenizer.decode(
             state.ids[state.prompt_length :], skip_special_tokens=False
@@ -384,6 +388,12 @@ def report(run: Path) -> dict:
             arm_stats[arm] = {
                 "correct": sum(row["correct"] for row in cases),
                 "accuracy": sum(row["correct"] for row in cases) / len(cases) if cases else None,
+                "answer_extracted": sum(
+                    row.get("answer_extracted", row["prediction"] is not None) for row in cases
+                ),
+                "thinking_complete": sum(row.get("thinking_complete", False) for row in cases),
+                "eos_ended": sum(row.get("eos_ended", False) for row in cases),
+                "swap_reasons": dict(Counter(row["swap"]["reason"] for row in cases)),
                 "mean_latency_s": statistics.mean(latencies) if cases else None,
                 "median_latency_s": statistics.median(latencies) if cases else None,
                 "p95_latency_s": (
@@ -453,18 +463,19 @@ def report(run: Path) -> dict:
         f"Completed: {summary['complete']}",
         f"Default suite complete: {summary['default_suite_complete']}",
         "",
-        "| Dataset | Paired n | Baseline accuracy | Swap accuracy | Delta pp | Baseline mean s | Swap mean s | Swap rate |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Dataset | Paired n | Baseline accuracy | Swap accuracy | Delta pp | Baseline answers | Swap answers | Baseline mean s | Swap mean s | Swap rate |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for task, item in summary["by_task"].items():
         baseline = item["arms"]["baseline"]["accuracy"]
         swap = item["arms"]["swap"]["accuracy"]
         lines.append(
             f"| {task} | {item['n']} | {baseline:.3f} | {swap:.3f} | {item['delta_accuracy_pp']:+.2f} | "
+            f"{item['arms']['baseline']['answer_extracted']} | {item['arms']['swap']['answer_extracted']} | "
             f"{item['arms']['baseline']['mean_latency_s']:.2f} | {item['arms']['swap']['mean_latency_s']:.2f} | "
             f"{item['arms']['swap']['swap_rate']:.2f} |"
             if item["n"]
-            else f"| {task} | 0 | pending | pending | pending | pending | pending | pending |"
+            else f"| {task} | 0 | pending | pending | pending | pending | pending | pending | pending | pending |"
         )
     atomic_text(run / "report.md", "\n".join(lines) + "\n")
     return summary

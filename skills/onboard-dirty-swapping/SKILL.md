@@ -11,7 +11,7 @@ Explain the research umbrella as reuse of information from unchosen tokens or co
 
 Guide setup through project-local `uv sync --frozen`, tests, dataset/model `setup`, a short paired `run`, `report`, and `resume`. The 64-token smoke config checks execution and may end before a final answer. Do not describe smoke accuracy as a benchmark result.
 
-Distinguish dataset status: AIME25, HMMT25, GSM8K, and GPQA Main are the default suite; SuperGPQA and LongBench v2 have adapters; MATH-500 is recommended but needs an adapter. Explain development versus evaluation splits and keep reference answers out of intervention selection.
+Distinguish dataset status: AIME25, HMMT25, GSM8K, and GPQA Main are the default suite; MATH-500, SuperGPQA, and LongBench v2 are supported additional tracks. Explain development versus evaluation splits, LongBench's capped context, and the normalized row/answer formats. Keep reference answers and worked solutions out of prompts and intervention selection.
 
 Present **final-answer accuracy** and **end-to-end inference time versus matching plain inference** as the two central outcomes. Pair the same examples and decoding conditions; show per-dataset accuracy, paired change, latency distribution, alternative cost, swap/skip rate, and memory. If a participant changes the model or other setup, require a corresponding plain baseline under that same setup before attributing gains to discarded-token reuse.
 

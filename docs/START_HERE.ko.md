@@ -30,7 +30,7 @@ uv run --frozen dirty-swapping report --run outputs/first-smoke
 
 `uv sync --frozen`은 레포 내부 `.venv`에 잠금 파일의 의존성을 설치합니다. `setup`은 원본 데이터와 모델을 내려받고 해시를 검증한 뒤 입력을 준비합니다. `run`은 같은 문제를 baseline과 swap으로 실행합니다. 출력·로그·모델은 각각 `outputs/`, `logs/`, `models/` 등에 저장되며 Git에서 제외됩니다. 중단되면 `uv run --frozen dirty-swapping resume --run outputs/first-smoke`로 완료된 문제를 재사용합니다.
 
-위 `smoke.json`은 빠른 동작 확인을 위해 **출력 64토큰, rollout 4토큰, 지연 4토큰**으로 줄인 설정입니다. 답이 나오기 전에 종료될 수 있으므로 이 결과의 정확도를 성능 수치로 쓰지 않습니다. 제안서 설정은 [default.json](../src/dirty_swapping/default.json)의 후보 4개·rollout 32토큰·지연 128토큰·reasoning 256토큰 뒤 분기입니다. `uv run --frozen dirty-swapping config > my-config.json`으로 설정을 복사해 수정하고 `--config my-config.json`으로 실험할 수 있습니다. 입력·출력 토큰 상한과 모델 context 상한의 합도 확인하세요.
+위 `smoke.json`은 빠른 동작 확인을 위해 **출력 64토큰, rollout 4토큰, 지연 4토큰**으로 줄인 설정입니다. 답이 나오기 전에 종료될 수 있으므로 이 결과의 정확도를 성능 수치로 쓰지 않습니다. 제안서 설정은 [default.json](../src/dirty_swapping/default.json)의 후보 4개·rollout 32토큰·지연 128토큰·reasoning 256토큰 뒤 분기와 **최대 출력 32,768토큰**입니다. 어려운 문제는 4,096토큰에서도 `<think>` 안에 남는 사례가 확인돼 긴 출력 한도를 기본값으로 둡니다. `uv run --frozen dirty-swapping config > my-config.json`으로 설정을 복사해 수정하고 `--config my-config.json`으로 실험할 수 있습니다. 입력·출력 토큰 상한과 모델 context 상한의 합도 확인하세요.
 
 ## 데이터셋 전체 풀
 
@@ -42,9 +42,9 @@ uv run --frozen dirty-swapping report --run outputs/first-smoke
 | `gpqa` | GPQA Main, 448문제 | 기본 평가 지원 | 과학·전문지식 QA |
 | `supergpqa` | SuperGPQA, 26,529문제 | 다운로드·어댑터 지원 | 더 큰 규모의 QA 확장 실험 |
 | `longbench_v2` | LongBench v2, 503문제 | 다운로드·어댑터 지원 | 긴 문맥에서 오래된 suffix KV 영향 확인 |
-| — | MATH-500 | **추천만**: 어댑터 미구현 | 수학 개발 또는 별도 평가 트랙 |
+| `math500` | MATH-500, 500문제 | 다운로드·어댑터 지원 | 수학 별도 평가 트랙 |
 
-기본 네 데이터셋은 한 명령에서 선택할 수 있습니다: `uv run --frozen dirty-swapping setup` 뒤 `uv run --frozen dirty-swapping run --run-name <새-이름>`. `--datasets`로 일부만 고를 수 있고 `--limit`는 작은 확인용입니다. AIME/HMMT/GPQA는 이 레포에서 평가 데이터로 다룹니다. 최종 평가 문항의 정답을 대안 선택에 사용하지 마세요. 출처·고정 revision·SHA256, 긴 문맥 자르기 규칙은 [datasets.md](datasets.md)와 [datasets.json](../src/dirty_swapping/datasets.json)에 있습니다.
+기본 네 데이터셋은 한 명령에서 선택할 수 있습니다: `uv run --frozen dirty-swapping setup` 뒤 `uv run --frozen dirty-swapping run --run-name <새-이름>`. `--datasets`로 나머지 세 트랙을 포함하거나 일부만 고를 수 있고 `--limit`는 작은 확인용입니다. AIME/HMMT/GPQA/MATH-500/SuperGPQA/LongBench는 이 레포에서 평가 데이터로 다룹니다. 최종 평가 문항의 정답을 대안 선택에 사용하지 마세요. 출처·고정 revision·SHA256, 정규화 필드와 split, 긴 문맥 자르기 규칙은 [datasets.md](datasets.md)와 [datasets.json](../src/dirty_swapping/datasets.json)에 있습니다. 현재 기본 입력 상한은 4,608토큰이며 LongBench v2 문맥 503개는 모두 이 상한에 맞춰 잘립니다.
 
 ## 반드시 함께 볼 두 성능 축
 
@@ -53,7 +53,7 @@ uv run --frozen dirty-swapping report --run outputs/first-smoke
 
 현재 실행기는 `baseline`과 `swap`을 같은 문제로 비교합니다. baseline의 토큰 경로는 순정 생성과 일치하지만 제어 코드의 작은 비용은 있을 수 있으므로, 절대적인 순정 시간 비교가 중요하면 같은 모델의 일반 `model.generate`도 별도로 측정하세요. 모델·프롬프트·토큰 상한·seed·GPU 조건을 맞추고 비교해야 시간과 정확도 차이를 해석할 수 있습니다. [competition.md](competition.md)에 제출·비교 규칙을 정리했습니다.
 
-이 레포의 소표본 검증에서는 네 문제의 순정과 baseline이 256토큰 모두 일치했고, baseline 시간은 평균 약 1.01배였습니다. 제안서 설정의 512토큰 짝지은 실행에서 swap의 추가 시간은 평균 약 3.70초였고 대부분 대안 rollout 준비 시간이었습니다. **네 문제·짧은 출력 상한의 결과이므로 전체 정확도나 속도 보장은 아닙니다.** 자세한 측정은 [검증 기록](implementation.md)을 보세요.
+이 레포의 소표본 검증에서는 일곱 데이터셋 각 한 문제의 순정과 baseline이 256토큰 모두 일치했습니다. 제안서 설정에서 swap은 대안 rollout 준비만큼 더 오래 걸렸고, 긴 LongBench 입력도 GPU에서 실행됐습니다. 하지만 **정확도 보존은 아직 확인되지 않았습니다.** 짧은 MATH-500 문항에서 2,048토큰 상한일 때 baseline은 정답을 냈고 swap은 답을 끝내지 못했습니다. 4,096토큰에서는 둘 다 정답이었습니다. 완주율과 시간 비용을 정확도와 함께 보고해야 하는 이유입니다. 자세한 측정은 [검증 기록](implementation.md)을 보세요.
 
 ## 실험의 자유도
 

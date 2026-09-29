@@ -12,7 +12,8 @@ class ConfigTests(unittest.TestCase):
     def test_invalid_caps_and_selector_fail(self):
         original = load_spec()
         for change in (
-            {"max_new_tokens": 9000},
+            {"max_new_tokens": original["model"]["max_context_tokens"] + 1},
+            {"max_new_tokens": 100},
             {"candidate_count": 1},
             {"alternative_selection": "gold_answer"},
         ):

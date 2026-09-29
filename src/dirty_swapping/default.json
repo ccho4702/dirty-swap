@@ -10,11 +10,11 @@
     "gpu_memory_fraction": 0.95,
     "prefill_chunk_tokens": 256,
     "local_files_only": true,
-    "max_context_tokens": 8192
+    "max_context_tokens": 37376
   },
   "generation": {
-    "max_input_tokens": 4096,
-    "max_new_tokens": 4096,
+    "max_input_tokens": 4608,
+    "max_new_tokens": 32768,
     "seed": 18,
     "candidate_count": 4,
     "branch_after_reasoning_tokens": 256,
@@ -24,7 +24,7 @@
     "alternative_selection": "second_highest_first_token_probability"
   },
   "data": {
-    "prompt_limit": 4096,
+    "prompt_limit": 4608,
     "shuffle_seed": 18,
     "default_datasets": ["aime25", "hmmt25", "gsm8k", "gpqa"]
   },

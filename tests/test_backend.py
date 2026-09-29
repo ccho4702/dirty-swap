@@ -79,6 +79,11 @@ class BackendTests(unittest.TestCase):
             {"device": "cpu", "threads": 1, "max_context_tokens": 64},
             model=Qwen3ForCausalLM(config), tokenizer=TinyTokenizer(),
         )
+        self.assertFalse(backend.model.training)
+        self.assertTrue(all(not parameter.requires_grad for parameter in backend.model.parameters()))
+        weights_before = {
+            name: parameter.detach().clone() for name, parameter in backend.model.named_parameters()
+        }
         prefix = backend.prefill({"question": "Q", "answer_format": "choice"})
         main, alternative = backend.fork(prefix), backend.fork(prefix)
         for token in (7, 7, 7):
@@ -97,6 +102,9 @@ class BackendTests(unittest.TestCase):
         self.assertTrue(changed)
         backend.step(main, 7)
         self.assertEqual(main.cache.get_seq_length(), 7)
+        for name, parameter in backend.model.named_parameters():
+            self.assertTrue(torch.equal(parameter, weights_before[name]))
+            self.assertIsNone(parameter.grad)
 
     def test_edit_changes_later_generation_without_suffix_rewrite(self):
         backend = TransformersBackend(

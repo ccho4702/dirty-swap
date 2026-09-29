@@ -91,6 +91,11 @@ class InterruptAfterFirstCase(FakeBackend):
         return super().prefill(row)
 
 
+class NoAnswerBackend(FakeBackend):
+    def decode_answer(self, state):
+        return ""
+
+
 class RunnerTests(unittest.TestCase):
     def setUp(self):
         self.spec = load_spec()
@@ -119,9 +124,17 @@ class RunnerTests(unittest.TestCase):
         swapped = run_case(backend, self.row, self.spec, "swap")
         self.assertTrue(baseline["correct"])
         self.assertTrue(swapped["correct"])
+        self.assertTrue(baseline["answer_extracted"])
+        self.assertTrue(swapped["answer_extracted"])
         self.assertFalse(baseline["swap"]["swapped"])
         self.assertTrue(swapped["swap"]["swapped"])
         self.assertEqual(swapped["swap"]["candidate_count_evaluated"], 4)
+
+    def test_missing_final_answer_is_incorrect(self):
+        result = run_case(NoAnswerBackend({}), self.row, self.spec, "baseline")
+        self.assertFalse(result["answer_extracted"])
+        self.assertIsNone(result["prediction"])
+        self.assertFalse(result["correct"])
 
     def test_run_resume_and_report(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -132,6 +145,7 @@ class RunnerTests(unittest.TestCase):
                 first = execute(run, work, backend_factory=FakeBackend)
                 self.assertTrue(first["complete"])
                 self.assertEqual(first["common_completed"], 1)
+                self.assertEqual(first["by_task"]["gpqa"]["arms"]["swap"]["answer_extracted"], 1)
                 second = execute(run, work, backend_factory=FakeBackend)
                 self.assertTrue(second["complete"])
                 self.assertEqual(report(run)["by_task"]["gpqa"]["arms"]["swap"]["correct"], 1)

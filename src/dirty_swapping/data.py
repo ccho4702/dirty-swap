@@ -137,6 +137,20 @@ def raw_rows(work_dir, task, seed):
                 "answer_format": "math",
                 "problem_type": row["problem_type"],
             }
+    elif task == "math500":
+        with (root / "test.jsonl").open() as stream:
+            for line in stream:
+                row = json.loads(line)
+                yield {
+                    "id": f"math500-{row['unique_id']}",
+                    "task": task,
+                    "question": row["problem"],
+                    "gold": row["answer"],
+                    "choices": [],
+                    "answer_format": "math",
+                    "subject": row["subject"],
+                    "level": row["level"],
+                }
     elif task == "supergpqa":
         with (root / "SuperGPQA-all.jsonl").open() as stream:
             for line in stream:
@@ -293,6 +307,7 @@ def prepare(work_dir, spec, benchmarks):
             "supergpqa": 26529,
             "longbench_v2": 503,
             "gsm8k": 8792,
+            "math500": 500,
         }[task]
         if len(rows) != expected or len({r["id"] for r in rows}) != expected:
             raise ValueError("Unexpected dataset cardinality or duplicate IDs")
