@@ -1,0 +1,66 @@
+{
+  "gsm8k": {
+    "task": "gsm8k",
+    "repo": "https://github.com/openai/grade-school-math",
+    "revision": "content-sha256-v1",
+    "files": {
+      "train.jsonl": "17f347dc51477c50d4efb83959dbb7c56297aba886e5544ee2aaed3024813465",
+      "test.jsonl": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14"
+    },
+    "urls": {
+      "train.jsonl": "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/train.jsonl",
+      "test.jsonl": "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl"
+    }
+  },
+  "longbench_v2": {
+    "task": "longbench_v2",
+    "repo": "zai-org/LongBench-v2",
+    "revision": "2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9",
+    "files": {
+      "README.md": "9fdd1a3ebe86507253c124a18e9f78c898ce6341c12990af17ab868b8f600c35",
+      "data.json": "15d61c22d92c96900b3c4948b6aeea218d3214b676a65df48e7b8555604c7fe2"
+    },
+    "url_prefix": "https://huggingface.co/datasets/zai-org/LongBench-v2/resolve/2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9/"
+  },
+  "supergpqa": {
+    "task": "supergpqa",
+    "repo": "m-a-p/SuperGPQA",
+    "revision": "4430d4458112c7d4497fdcf94d7cc223313d6acf",
+    "files": {
+      "README.md": "0d670692d5f36a066d67c10741d160a5fcf0c2cb97f22c8dc8f453ac930b083a",
+      "SuperGPQA-all.jsonl": "28b998e70205ee95e540317b5adc06a06552a3961fb50b153df126b833f7a910"
+    },
+    "url_prefix": "https://huggingface.co/datasets/m-a-p/SuperGPQA/resolve/4430d4458112c7d4497fdcf94d7cc223313d6acf/"
+  },
+  "hmmt25": {
+    "task": "hmmt25",
+    "repo": "MathArena/hmmt_feb_2025",
+    "revision": "6fdc4277120810ff75aa22d2d5489b91f7a262a1",
+    "files": {
+      "README.md": "c40c205cdcca35b5188a8809bd9cd200612d4d7f1f23bf88e8806efd083b072a",
+      "data/train-00000-of-00001.parquet": "ccca64d248b89dc0765e40b893fe4ebeab242226a4336027d95d256886a3d5f2"
+    },
+    "url_prefix": "https://huggingface.co/datasets/MathArena/hmmt_feb_2025/resolve/6fdc4277120810ff75aa22d2d5489b91f7a262a1/"
+  },
+  "gpqa": {
+    "task": "gpqa",
+    "repo": "https://github.com/idavidrein/gpqa",
+    "revision": "56686c06f5e19865c153de0fdb11be3890014df7",
+    "files": {
+      "dataset.zip": "461ae7329f15a3e35f8184d2dac24b990f34fdf12f366ca4062d8e6638cd08dc",
+      "README.md": "0be2cf410fecf82fb811f02e2314ecc5a19decc1515014498e59bae4680d4d81"
+    },
+    "url_prefix": "https://raw.githubusercontent.com/idavidrein/gpqa/56686c06f5e19865c153de0fdb11be3890014df7/",
+    "public_archive_password": "deserted-untie-orchid"
+  },
+  "aime25": {
+    "files": {
+      "README.md": "c0538c503517a198662a8575adda395b2dfc2abe3f76f74c1a4ef952a69debaa",
+      "data/train-00000-of-00001.parquet": "9f9066ff48ad2e31f9bf1b1ac6d5e80693195f987985f2859f89dd25ffa51c2d"
+    },
+    "revision": "c94da77eb22bbd6439e62a323bec18493a421302",
+    "task": "aime25",
+    "repo": "MathArena/aime_2025",
+    "url_prefix": "https://huggingface.co/datasets/MathArena/aime_2025/resolve/c94da77eb22bbd6439e62a323bec18493a421302/"
+  }
+}
