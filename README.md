@@ -1,6 +1,12 @@
 # Dirty Swapping — Group 18 IDL baseline
 
-처음 시작한다면 [한국어 시작 가이드](docs/START_HERE.ko.md)를 보세요. 에이전트가 새 참가자를 안내할 때 사용할 [레포 내부 온보딩 스킬](skills/onboard-dirty-swapping/SKILL.md)도 있습니다.
+**처음 시작한다면, 레포 루트에서 이 명령 하나를 실행하세요:**
+
+```bash
+./start.sh
+```
+
+설치나 다운로드 없이 이 레포의 자료 지도와 첫 실행 명령을 보여줍니다. 자세한 설명은 [한국어 시작 가이드](docs/START_HERE.ko.md), 에이전트용 안내는 [온보딩 SKILL.md](skills/onboard-dirty-swapping/SKILL.md)에 있습니다.
 
 This repository provides a minimal, runnable reference for the [Group 18 proposal](docs/proposal.pdf): **improve final-answer accuracy on text QA by replacing one past KV-cache segment with a precomputed counterfactual segment**. The model's weights, already generated token IDs, and all KV positions after that segment remain unchanged. Baseline and swap runs use the same frozen Qwen3-4B-Thinking-2507 model and greedy main path. Accuracy may or may not improve; this repository defines a reproducible starting point for a competition-style project.
 

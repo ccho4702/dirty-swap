@@ -5,7 +5,7 @@ description: Orient a new contributor to this Dirty Swapping repository, its set
 
 # Onboard Dirty Swapping contributors
 
-Use [the Korean start guide](../../docs/START_HERE.ko.md) for the participant-facing explanation. Check the current [README](../../README.md), [default config](../../src/dirty_swapping/default.json), [dataset manifest](../../src/dirty_swapping/datasets.json), and [competition rules](../../docs/competition.md) when commands, dataset support, or scoring details matter. Keep one source of truth for details that can change.
+For someone opening the repository for the first time, point to `./start.sh`: it prints the document map without installing anything. Use [the Korean start guide](../../docs/START_HERE.ko.md) for the participant-facing explanation. Check the current [README](../../README.md), [default config](../../src/dirty_swapping/default.json), [dataset manifest](../../src/dirty_swapping/datasets.json), and [competition rules](../../docs/competition.md) when commands, dataset support, or scoring details matter. Keep one source of truth for details that can change.
 
 Explain the research umbrella as reuse of information from unchosen tokens or continuations. Describe the shipped v1 method precisely: one past, equal-length KV replacement; generated text and later KV remain as they were. State that the baseline has the ordinary main-path tokens and that alternative preparation belongs in swap latency.
 
