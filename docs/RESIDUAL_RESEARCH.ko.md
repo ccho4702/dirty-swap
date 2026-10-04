@@ -66,3 +66,66 @@ QA는 완료된 문항/arm마다 원자적 체크포인트를 저장한다. 중�
 수로 정하고 main도 동일 길이를 진행한다. 불완전하거나 여전히 긴 후보는 기존처럼
 명시적으로 skip한다. 짧은 후보를 padding하지 않는다. 최초 실패 기록은
 `outputs/residual-cache-check-20261005`에 보존한다.
+
+## 초반 교체의 수학 결과와 다음 진단
+
+수학 4개는 3/4→3/4, wins/losses 0/0이었다. 교체는 4개 모두 적용됐다.
+양쪽 모두 3개는 최종 답을 완성했고, 나머지 1개는 8,192토큰 상한에서 reasoning이
+끝나지 않았다. 평균 시간은 173.19→179.73초(+3.8%)다.
+
+GPQA 2개는 0/2→0/2, 평균 시간 325.91→299.83초(-8.0%)였다. 순정은 최종
+답을 추출한 사례가 없었고, 교체는 하나의 최종 답을 냈지만 오답이었다.
+따라서 정확도 개선도, 일반 QA 성능 보존의 충분한 증거도 얻지 못했다.
+6개 모두 실제 교체가 적용됐으며 전체 wins/losses는 0/0이다.
+
+Offline 진단에서 미완료 문항 `math500-test/intermediate_algebra/1422.json`의
+generic draft는 정답을 포함했다. 저장된 명시적 final answer를 기존 Math-Verify로
+확인했다. 정답 label은 이 사후 진단에만 사용했으며 생성/교체 정책에 제공하지 않았다.
+완료되지 않은 main 출력을 draft 답으로 대체해 점수를 올리지 않는다.
+
+추가로 저장된 main reasoning을 확인하니 순정·교체 모두 이미 정답을 언급한 뒤
+재검토를 반복하고 있었다. 따라서 지식 전달 실패라고 단정할 수 없으며, 이 사례의
+직접적인 실패는 reasoning 종료와 최종 답변 완료다. 늦은 교체가 성공해도 우선
+동일 예산에서의 completion 이득으로 보고해야 한다. 잘못된 reasoning을 수정한
+증거로 해석하지 않는다. 단순 reasoning-budget 종료 제어와도 비교할 필요가 있다.
+
+다음은 `residual-draft-late-diagnostic.json`으로 **분기 구간만** 64~512에서
+4,096~4,608 reasoning tokens로 옮기는 진단이다. 혼합 0.5, generic draft,
+구간 상한 256, suffix 16, 전체 출력 8,192는 그대로다. 이는 출력 예산의 절반까지
+reasoning이 지속될 때 개입하는 공통 규칙이며 task 이름을 검사하지 않는다.
+일찍 완료된 응답은 교체 없이 종료한다.
+
+해당 문항은 결과를 본 뒤 선택했으므로 이후에는 개발용 진단 사례다.
+이 한 문항에서 좋아져도 독립 benchmark 향상으로 세지 않는다. 유망할 때만 같은
+설정을 미사용 문항에 고정해 평가한다. 기능 구현은 기존 코드의 configuration으로
+가능하며 새로운 학습을 추가하지 않는다.
+
+별도의 [범용 reward model 문헌 검토](REWARD_RESEARCH.ko.md)는 후보 집합에 실제
+정답 이득이 생기는지 확인한 뒤 선택 기능을 추가할 때 참고한다.
+
+## 순정 sampling 진단
+
+[공식 Qwen 모델 카드](https://huggingface.co/Qwen/Qwen3-4B-Thinking-2507)의
+temperature 0.6 / top-p 0.95 / top-k 20으로 같은 개발 진단 문항을 native
+`model.generate`에 넣었다. 모델·prompt·seed·출력 한도는 유지했다.
+Greedy는 8,192토큰에서 답변 미완료였고, sampling은 8,136토큰/316.09초에
+최종 정답으로 완료됐다. **이것은 KV 교체의 성과가 아니다.** 결과를 본 뒤 고른
+한 문항의 진단이므로 일반 benchmark 향상으로 보고하지 않는다.
+
+이 결과만으로 greedy가 모든 문제에서 나쁘다고 결론 내릴 수 없지만, 이후 KV
+방법의 주장은 권장 sampling을 양쪽에 적용한 순정 비교도 포함해야 한다.
+현재 일반 runner의 main은 여전히 greedy다. 이 진단 명령만 native sampling을
+사용하며 runner에 sampling을 지원했다고 잘못 설명하지 않는다.
+
+```bash
+uv run --frozen python scripts/check_native_sampling.py \
+  --config configs/native-sampling-diagnostic.json --run-name native-check
+uv run --frozen python scripts/check_native_sampling.py --resume outputs/native-check
+```
+
+실제 생성 도중 SIGINT 중단 후 동일 설정·seed로 prompt부터 재생해 완료하는
+검사를 통과했다. 완료 checkpoint는 SHA 검증 뒤 모델을 읽지 않고 반환한다.
+잘못된 sampling 설정은 run 생성 전에 거부한다. 이 진단의 원본 출력은
+`outputs/native-sampling-diagnostic-20261005`에 있으며 공개 요약에는 정답 문자열을
+넣지 않는다. 코어 55개 단위 검사, 실제 GPU 36-layer cache 보존 및 native greedy
+일치 검사를 통과했다. 늦은 교체 configuration은 별도의 개발 진단이다.

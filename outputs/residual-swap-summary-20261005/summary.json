@@ -1,0 +1,537 @@
+{
+  "accuracy_gain_claim": false,
+  "at": "2026-10-04T20:19:51.964525+00:00",
+  "branch": "changho",
+  "cases": [
+    {
+      "answer_extracted": true,
+      "arm": "baseline",
+      "correct": true,
+      "eos_ended": true,
+      "generated_tokens": 2083,
+      "id": "math500-test/precalculus/625.json",
+      "latency_s": 81.18109076609835,
+      "swap_reason": "baseline",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": false,
+      "arm": "baseline",
+      "correct": false,
+      "eos_ended": false,
+      "generated_tokens": 8192,
+      "id": "math500-test/intermediate_algebra/1422.json",
+      "latency_s": 316.6708419509232,
+      "swap_reason": "baseline",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": false
+    },
+    {
+      "answer_extracted": true,
+      "arm": "baseline",
+      "correct": true,
+      "eos_ended": true,
+      "generated_tokens": 1510,
+      "id": "math500-test/counting_and_probability/913.json",
+      "latency_s": 58.86547400569543,
+      "swap_reason": "baseline",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": false,
+      "arm": "baseline",
+      "correct": false,
+      "eos_ended": false,
+      "generated_tokens": 8192,
+      "id": "gpqa-recUOePh79cp4T2Bg",
+      "latency_s": 331.0020712260157,
+      "swap_reason": "baseline",
+      "swap_strength": 0.5,
+      "task": "gpqa",
+      "thinking_complete": false
+    },
+    {
+      "answer_extracted": false,
+      "arm": "baseline",
+      "correct": false,
+      "eos_ended": false,
+      "generated_tokens": 8192,
+      "id": "gpqa-recRhwQwHijW0gCLo",
+      "latency_s": 320.8275701678358,
+      "swap_reason": "baseline",
+      "swap_strength": 0.5,
+      "task": "gpqa",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": true,
+      "arm": "baseline",
+      "correct": true,
+      "eos_ended": true,
+      "generated_tokens": 6109,
+      "id": "math500-test/algebra/1282.json",
+      "latency_s": 236.04920756816864,
+      "swap_reason": "baseline",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": true,
+      "arm": "swap",
+      "correct": true,
+      "eos_ended": true,
+      "generated_tokens": 1778,
+      "id": "math500-test/precalculus/625.json",
+      "latency_s": 83.01763878203928,
+      "swap_reason": "draft_swapped",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": false,
+      "arm": "swap",
+      "correct": false,
+      "eos_ended": false,
+      "generated_tokens": 8192,
+      "id": "math500-test/intermediate_algebra/1422.json",
+      "latency_s": 325.8661569291726,
+      "swap_reason": "draft_swapped",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": false
+    },
+    {
+      "answer_extracted": true,
+      "arm": "swap",
+      "correct": true,
+      "eos_ended": true,
+      "generated_tokens": 1387,
+      "id": "math500-test/counting_and_probability/913.json",
+      "latency_s": 58.367153969127685,
+      "swap_reason": "draft_swapped",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": false,
+      "arm": "swap",
+      "correct": false,
+      "eos_ended": false,
+      "generated_tokens": 8192,
+      "id": "gpqa-recUOePh79cp4T2Bg",
+      "latency_s": 337.90432130964473,
+      "swap_reason": "draft_swapped",
+      "swap_strength": 0.5,
+      "task": "gpqa",
+      "thinking_complete": false
+    },
+    {
+      "answer_extracted": true,
+      "arm": "swap",
+      "correct": false,
+      "eos_ended": true,
+      "generated_tokens": 6515,
+      "id": "gpqa-recRhwQwHijW0gCLo",
+      "latency_s": 261.74690464511514,
+      "swap_reason": "draft_swapped",
+      "swap_strength": 0.5,
+      "task": "gpqa",
+      "thinking_complete": true
+    },
+    {
+      "answer_extracted": true,
+      "arm": "swap",
+      "correct": true,
+      "eos_ended": true,
+      "generated_tokens": 5684,
+      "id": "math500-test/algebra/1282.json",
+      "latency_s": 251.66063160309568,
+      "swap_reason": "draft_swapped",
+      "swap_strength": 0.5,
+      "task": "math500",
+      "thinking_complete": true
+    }
+  ],
+  "config": {
+    "data": {
+      "default_datasets": [
+        "aime25",
+        "hmmt25",
+        "gsm8k",
+        "gpqa"
+      ],
+      "prompt_limit": 4608,
+      "shuffle_seed": 18
+    },
+    "execution": {
+      "case_ids": {
+        "gpqa": [
+          "gpqa-recUOePh79cp4T2Bg",
+          "gpqa-recRhwQwHijW0gCLo"
+        ],
+        "math500": [
+          "math500-test/precalculus/625.json",
+          "math500-test/counting_and_probability/913.json",
+          "math500-test/algebra/1282.json",
+          "math500-test/intermediate_algebra/1422.json"
+        ]
+      },
+      "progress_interval_seconds": 15
+    },
+    "generation": {
+      "alternative_selection": "draft_swap",
+      "branch_after_reasoning_tokens": 64,
+      "branch_policy": "reasoning_step",
+      "branch_scan_end": 512,
+      "candidate_count": 2,
+      "delay_tokens": 16,
+      "draft": {
+        "download_workers": 2,
+        "max_input_tokens": 4608,
+        "max_new_tokens": 512,
+        "model": {
+          "device": "cuda:0",
+          "dtype": "bfloat16",
+          "name": "Qwen/Qwen3-4B-Instruct-2507",
+          "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+        },
+        "prompt": "Produce a brief, supported answer to the question. Use supplied context and options when present. State essential justification and a clear final answer. Avoid unsupported assumptions. Be concise: at most 80 words."
+      },
+      "max_input_tokens": 4608,
+      "max_new_tokens": 8192,
+      "max_swaps_per_trace": 1,
+      "rollout_tokens": 256,
+      "seed": 18,
+      "swap_strength": 0.5
+    },
+    "model": {
+      "cache_dir": "/home/changho.choi/CMU/IDL/project/dirty-swapping/models",
+      "device": "cuda:0",
+      "dtype": "bfloat16",
+      "enable_thinking": true,
+      "gpu_memory_fraction": 0.95,
+      "local_files_only": true,
+      "max_context_tokens": 12800,
+      "name": "Qwen/Qwen3-4B-Thinking-2507",
+      "prefill_chunk_tokens": 256,
+      "revision": "768f209d9ea81521153ed38c47d515654e938aea",
+      "threads": 4
+    },
+    "protocol": "dirty-swapping-v1"
+  },
+  "full_dataset_evaluation": false,
+  "limitations": [
+    "Six prospective paired examples, not a full benchmark.",
+    "Greedy generation with 8192 output cap; QA floor and math ceiling limit conclusions.",
+    "Single-pass latency includes environmental variation.",
+    "Native sampling check is one inspected development case and uses no KV intervention.",
+    "No learned gate or coding benchmark evaluated."
+  ],
+  "lock_sha256": "29baa7ab5b90d38fd668456502608cbcd67d3f16790460a6c141a5740d45d732",
+  "native_sampling_diagnostic": {
+    "completed_resume_passed": true,
+    "config": {
+      "data": {
+        "default_datasets": [
+          "aime25",
+          "hmmt25",
+          "gsm8k",
+          "gpqa"
+        ],
+        "prompt_limit": 4608,
+        "shuffle_seed": 18
+      },
+      "execution": {
+        "case_ids": {
+          "math500": [
+            "math500-test/intermediate_algebra/1422.json"
+          ]
+        },
+        "progress_interval_seconds": 15
+      },
+      "generation": {
+        "alternative_selection": "draft_swap",
+        "branch_after_reasoning_tokens": 4096,
+        "branch_policy": "reasoning_step",
+        "branch_scan_end": 4608,
+        "candidate_count": 2,
+        "delay_tokens": 16,
+        "draft": {
+          "download_workers": 2,
+          "max_input_tokens": 4608,
+          "max_new_tokens": 512,
+          "model": {
+            "device": "cuda:0",
+            "dtype": "bfloat16",
+            "name": "Qwen/Qwen3-4B-Instruct-2507",
+            "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+          },
+          "prompt": "Produce a brief, supported answer to the question. Use supplied context and options when present. State essential justification and a clear final answer. Avoid unsupported assumptions. Be concise: at most 80 words."
+        },
+        "max_input_tokens": 4608,
+        "max_new_tokens": 8192,
+        "max_swaps_per_trace": 1,
+        "rollout_tokens": 256,
+        "seed": 18,
+        "swap_strength": 0.5
+      },
+      "model": {
+        "cache_dir": "/home/changho.choi/CMU/IDL/project/dirty-swapping/models",
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "enable_thinking": true,
+        "gpu_memory_fraction": 0.95,
+        "local_files_only": true,
+        "max_context_tokens": 12800,
+        "name": "Qwen/Qwen3-4B-Thinking-2507",
+        "prefill_chunk_tokens": 256,
+        "revision": "768f209d9ea81521153ed38c47d515654e938aea",
+        "threads": 4
+      },
+      "protocol": "dirty-swapping-v1"
+    },
+    "heldout_performance_claim": false,
+    "interrupted_and_resumed": true,
+    "invalid_config_rejected": true,
+    "result": {
+      "answer_extracted": true,
+      "at": "2026-10-04T20:17:21.671848+00:00",
+      "correct": true,
+      "diagnostic_only": true,
+      "eos_ended": true,
+      "generated_tokens": 8136,
+      "id": "math500-test/intermediate_algebra/1422.json",
+      "kv_swap": false,
+      "latency_s": 316.08717576088384,
+      "peak_cuda_memory_mib": 8907.97802734375,
+      "sampling": {
+        "temperature": 0.6,
+        "top_k": 20,
+        "top_p": 0.95
+      },
+      "seed": 2231131856,
+      "thinking_complete": true
+    },
+    "script_sha256": "a2f0b14719b690892abc4c267e469a8b8415d06f58b13dae3e3b7d9539c151b3",
+    "settings": {
+      "base_config": "configs/residual-draft-late-diagnostic.json",
+      "dataset": "math500",
+      "sampling": {
+        "temperature": 0.6,
+        "top_k": 20,
+        "top_p": 0.95
+      },
+      "split": "evaluation"
+    },
+    "source": {
+      "dirty_swapping/__init__.py": "b86e5ab65f036ff90052fff3b05509248cfac7902fbb1079edbf7a0029330aeb",
+      "dirty_swapping/backend.py": "eb2e018347fdc4ee7c2677d135d1e7afc294641382e20d85dfb1beb59b94a89b",
+      "dirty_swapping/cache.py": "7887270c80eabf5756cfdd2b452207549a591e39f87917f7b2d6009a9ce9633a",
+      "dirty_swapping/cli.py": "5dba1dec49abae2dc90ad7e1092bb6b114e65512111e548eed9279fb60999e55",
+      "dirty_swapping/config.py": "8de66fbc89942ce44cd37ec473beb339d0e774cc35aa0c3528ec3c81055ecdd8",
+      "dirty_swapping/core.py": "b00fbade52761a4155870d4a8f2b31057f8ebc6e7c6cb24526df7cfbbe7aac7d",
+      "dirty_swapping/data.py": "52fc2f5156fdcb1f7ea9b0900f84b22d7c85d51112540778d1ada53ab0312e15",
+      "dirty_swapping/datasets.json": "7fa6047bf294fdfbfe452bdfe3c930b16c68fc18adaea2b65dc8754ab0450d96",
+      "dirty_swapping/default.json": "dd2d707b640c7e5f8073aebbd181463e1e7f42e6c72bedf1f0d3060deae4f3f3",
+      "dirty_swapping/draft.py": "79afa7e0f0b276b5bb190c3e0f68b676fa3432a1f467ebe331d8d6706f80ed7a",
+      "dirty_swapping/engine.py": "fa9a2c7662cb86c6b67626337a7a6dbe067aa6c1ca553a60fc83e1e55c352899",
+      "dirty_swapping/math_scoring.py": "7a7b79c3ccc7fc05f42add7ba68b0747f531f3eba928e4cab4c7ed54f86ab60e",
+      "dirty_swapping/preference.py": "96401ee88057cd9100e320b4fb56f584b8059110e02576f209d21ca2e8b7f8f8",
+      "dirty_swapping/probe_selection.py": "8cbb2dfbcbc8e5e1ad709f87774b913069d19e5eaf21964e7d3d5e3b3945f702",
+      "dirty_swapping/prompt.py": "8b2005893b2b60938a39145e9717afb71136c71bdf51ff8f51b194d1477288a4",
+      "dirty_swapping/protocol.py": "9d3c09d127fb19a1fa38433e04356cb32ede938658a9372556aab3c4a34268ab",
+      "dirty_swapping/runner.py": "02a95a0e4f31207417853632d9a10504564c4b842c68ef0b2e9c59eb14ab96d3",
+      "dirty_swapping/scoring.py": "f0093dcdce2c3faedbc216eec1ecbc5107ceac3f6cc092f471cdbefec71ad5a5"
+    }
+  },
+  "posthoc_diagnosis": {
+    "both_greedy_arms_fail_to_finish": true,
+    "both_main_reasoning_traces_mention_correct_answer": true,
+    "draft_final_answer_correct": true,
+    "gold_used_only_for_offline_diagnosis": true,
+    "id": "math500-test/intermediate_algebra/1422.json"
+  },
+  "report": {
+    "at": "2026-10-04T20:11:11.387478+00:00",
+    "by_task": {
+      "gpqa": {
+        "arms": {
+          "baseline": {
+            "accuracy": 0.0,
+            "answer_extracted": 0,
+            "correct": 0,
+            "eos_ended": 0,
+            "max_peak_cuda_memory_mib": 16741.2626953125,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 325.91482069692574,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 325.91482069692574,
+            "p95_latency_s": 331.0020712260157,
+            "sum_latency_s": 651.8296413938515,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 2
+            },
+            "thinking_complete": 1
+          },
+          "swap": {
+            "accuracy": 0.0,
+            "answer_extracted": 1,
+            "correct": 0,
+            "eos_ended": 1,
+            "max_peak_cuda_memory_mib": 16741.2607421875,
+            "mean_alternative_rollout_s": 3.6131106775719672,
+            "mean_draft_s": 3.6525279183406383,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 299.82561297737993,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0035918145440518856,
+            "median_latency_s": 299.82561297737993,
+            "p95_latency_s": 337.90432130964473,
+            "sum_latency_s": 599.6512259547599,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 2
+            },
+            "thinking_complete": 1
+          }
+        },
+        "delta_accuracy_pp": 0.0,
+        "losses": 0,
+        "n": 2,
+        "wins": 0
+      },
+      "math500": {
+        "arms": {
+          "baseline": {
+            "accuracy": 0.75,
+            "answer_extracted": 3,
+            "correct": 3,
+            "eos_ended": 3,
+            "max_peak_cuda_memory_mib": 16640.9169921875,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 173.1916535727214,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 158.6151491671335,
+            "p95_latency_s": 316.6708419509232,
+            "sum_latency_s": 692.7666142908856,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 4
+            },
+            "thinking_complete": 3
+          },
+          "swap": {
+            "accuracy": 0.75,
+            "answer_extracted": 3,
+            "correct": 3,
+            "eos_ended": 3,
+            "max_peak_cuda_memory_mib": 16640.9169921875,
+            "mean_alternative_rollout_s": 5.108930968213826,
+            "mean_draft_s": 5.152997285826132,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 179.7278953208588,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.004339255043305457,
+            "median_latency_s": 167.33913519256748,
+            "p95_latency_s": 325.8661569291726,
+            "sum_latency_s": 718.9115812834352,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 4
+            },
+            "thinking_complete": 3
+          }
+        },
+        "delta_accuracy_pp": 0.0,
+        "losses": 0,
+        "n": 4,
+        "wins": 0
+      }
+    },
+    "common_completed": 6,
+    "complete": true,
+    "default_suite_complete": false,
+    "primary_macro_accuracy": null,
+    "selected_macro_accuracy": {
+      "baseline": 0.375,
+      "swap": 0.375
+    }
+  },
+  "residual_core_revision": "3f9fa9b58d68465f8d056536764339755f94defe",
+  "runtime": {
+    "cuda_runtime": "12.4",
+    "gpu_driver_versions": [
+      "565.57.01"
+    ],
+    "packages": {
+      "huggingface-hub": "0.36.2",
+      "math-verify": "0.9.0",
+      "pyarrow": "23.0.1",
+      "torch": "2.6.0",
+      "transformers": "4.57.1"
+    },
+    "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+    "python": "3.12.4",
+    "visible_gpus": [
+      "NVIDIA GeForce RTX 3090"
+    ]
+  },
+  "source": {
+    "dirty_swapping/__init__.py": "b86e5ab65f036ff90052fff3b05509248cfac7902fbb1079edbf7a0029330aeb",
+    "dirty_swapping/backend.py": "eb2e018347fdc4ee7c2677d135d1e7afc294641382e20d85dfb1beb59b94a89b",
+    "dirty_swapping/cache.py": "7887270c80eabf5756cfdd2b452207549a591e39f87917f7b2d6009a9ce9633a",
+    "dirty_swapping/cli.py": "5dba1dec49abae2dc90ad7e1092bb6b114e65512111e548eed9279fb60999e55",
+    "dirty_swapping/config.py": "8de66fbc89942ce44cd37ec473beb339d0e774cc35aa0c3528ec3c81055ecdd8",
+    "dirty_swapping/core.py": "b00fbade52761a4155870d4a8f2b31057f8ebc6e7c6cb24526df7cfbbe7aac7d",
+    "dirty_swapping/data.py": "52fc2f5156fdcb1f7ea9b0900f84b22d7c85d51112540778d1ada53ab0312e15",
+    "dirty_swapping/datasets.json": "7fa6047bf294fdfbfe452bdfe3c930b16c68fc18adaea2b65dc8754ab0450d96",
+    "dirty_swapping/default.json": "dd2d707b640c7e5f8073aebbd181463e1e7f42e6c72bedf1f0d3060deae4f3f3",
+    "dirty_swapping/draft.py": "79afa7e0f0b276b5bb190c3e0f68b676fa3432a1f467ebe331d8d6706f80ed7a",
+    "dirty_swapping/engine.py": "fa9a2c7662cb86c6b67626337a7a6dbe067aa6c1ca553a60fc83e1e55c352899",
+    "dirty_swapping/math_scoring.py": "7a7b79c3ccc7fc05f42add7ba68b0747f531f3eba928e4cab4c7ed54f86ab60e",
+    "dirty_swapping/preference.py": "96401ee88057cd9100e320b4fb56f584b8059110e02576f209d21ca2e8b7f8f8",
+    "dirty_swapping/probe_selection.py": "8cbb2dfbcbc8e5e1ad709f87774b913069d19e5eaf21964e7d3d5e3b3945f702",
+    "dirty_swapping/prompt.py": "8b2005893b2b60938a39145e9717afb71136c71bdf51ff8f51b194d1477288a4",
+    "dirty_swapping/protocol.py": "9d3c09d127fb19a1fa38433e04356cb32ede938658a9372556aab3c4a34268ab",
+    "dirty_swapping/runner.py": "02a95a0e4f31207417853632d9a10504564c4b842c68ef0b2e9c59eb14ab96d3",
+    "dirty_swapping/scoring.py": "f0093dcdce2c3faedbc216eec1ecbc5107ceac3f6cc092f471cdbefec71ad5a5"
+  },
+  "trained_parameters": 0,
+  "verification": {
+    "completed_check_resume_passed": true,
+    "cpu_tests_passed": 55,
+    "real_gpu": {
+      "all_layer_spans_changed": true,
+      "at": "2026-10-04T19:26:22.190623+00:00",
+      "delay_tokens": 16,
+      "device": "cuda:0",
+      "existing_ids_preserved": true,
+      "id": "gsm8k-train-1292",
+      "layers": 36,
+      "models_frozen": true,
+      "native_generate_matches_baseline": true,
+      "passed": true,
+      "prefix_kv_preserved": true,
+      "rollout_tokens": 101,
+      "stale_first_future_token_preserved": true,
+      "suffix_kv_preserved": true,
+      "swap_strength": 0.5,
+      "zero_strength_identity": true
+    }
+  }
+}

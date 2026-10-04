@@ -1,0 +1,6 @@
+{
+  "base_config": "configs/residual-draft-late-diagnostic.json",
+  "dataset": "math500",
+  "split": "evaluation",
+  "sampling": {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
+}

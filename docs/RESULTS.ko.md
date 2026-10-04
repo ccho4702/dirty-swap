@@ -4,6 +4,19 @@
 
 이 문서는 이전 수학 중심 탐색의 기록이다. 현재 공통 정책과 미검증 범위는 [일반 방법론](GENERAL_METHOD.ko.md)에 있다. 아래 수치를 일반 QA 전이 결과로 해석하지 않는다.
 
+## 2026-10-05 추가 확인: 50% KV 혼합
+
+Generic draft를 main으로 재인코딩하고 기존 K/V와 50%씩 혼합했다. 미사용
+MATH-500 4개와 GPQA 2개를 사전 고정하고 양쪽 모두 greedy/8,192토큰으로 비교했다.
+수학은 3/4→3/4(+3.8% 시간), GPQA는 0/2→0/2(-8.0% 시간)로 정확도 개선은 없었다.
+실제 교체는 6개 모두 적용됐다. 작은 표본과 답변 미완료 때문에 QA 보존을 입증한
+결과로 해석하지 않는다.
+
+개발용 사후 진단 한 문항에서는 순정 sampling만으로 답변 미완료→정답이 됐다.
+**KV 교체 성과가 아니다.** 자세한 조건과 후속 진단은
+[잔차 교체 기록](RESIDUAL_RESEARCH.ko.md), 측정값과 검증은
+[공개 JSON](../outputs/residual-swap-summary-20261005/summary.json)에 있다.
+
 ## 실행 조건
 
 RTX 3090 24 GiB, BF16, Transformers 4.57.1, Torch 2.6.0, seed 18. 측정한 package revision은 `9f65ce8`이며 [공개 결과 JSON](../outputs/research-summary-20261004/summary.json)에 각 run의 source manifest digest, model revision, runtime, 문제별 결과와 원래 보고서의 metrics를 보존했다. 정답 라벨과 문제 원문은 포함하지 않는다.
