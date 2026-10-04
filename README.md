@@ -1,5 +1,7 @@
 # Dirty Swapping — Group 18 IDL baseline
 
+`changho` is the research branch. The shared `main` retains the official baseline. The experimental math-only probe selector is described in [the probe research notes](docs/PROBE_RESEARCH.ko.md) and configured in `configs/probe-preference.json`.
+
 **처음 시작한다면, 레포 루트에서 이 명령 하나를 실행하세요:**
 
 ```bash

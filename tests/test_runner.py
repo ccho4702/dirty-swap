@@ -8,7 +8,7 @@ from unittest.mock import patch
 import torch
 
 from dirty_swapping.config import load_spec, runtime_spec
-from dirty_swapping.runner import create_run, execute, report, run_case
+from dirty_swapping.runner import create_run, execute, report, run_case, selected_rows
 
 
 class FakeTokenizer:
@@ -96,6 +96,20 @@ class NoAnswerBackend(FakeBackend):
         return ""
 
 
+class NumericBackend(FakeBackend):
+    def __init__(self, config, eligible=True):
+        super().__init__(config)
+        self.eligible = eligible
+        self.scans = 0
+
+    def numeric_ambiguity(self, state, min_ratio):
+        self.scans += 1
+        return {"policy": "numeric_ambiguity", "top2_ratio": 0.5} if self.eligible else None
+
+    def decode_answer(self, state):
+        return "\\boxed{4}"
+
+
 class RunnerTests(unittest.TestCase):
     def setUp(self):
         self.spec = load_spec()
@@ -135,6 +149,50 @@ class RunnerTests(unittest.TestCase):
         self.assertFalse(result["answer_extracted"])
         self.assertIsNone(result["prediction"])
         self.assertFalse(result["correct"])
+
+    def test_numeric_scan_has_one_event_and_no_trigger_fallback(self):
+        self.spec["generation"].update(
+            branch_policy="numeric_ambiguity", branch_scan_end=2, min_top2_ratio=0.1
+        )
+        row = {**self.row, "answer_format": "math", "gold": "4", "choices": []}
+        backend = NumericBackend({})
+        result = run_case(backend, row, self.spec, "swap")
+        self.assertTrue(result["swap"]["swapped"])
+        self.assertEqual(result["branch_position"], 5)
+        self.assertEqual(backend.scans, 1)
+        backend = NumericBackend({}, eligible=False)
+        result = run_case(backend, row, self.spec, "swap")
+        self.assertFalse(result["swap"]["swapped"])
+        self.assertEqual(result["swap"]["reason"], "no_numeric_ambiguity")
+        self.assertIsNone(result["branch_position"])
+        self.assertEqual(backend.scans, 1)
+
+    def test_explicit_cohort_preserves_order_and_rejects_missing_split_ids(self):
+        rows = [{**self.row, "id": "a"}, {**self.row, "id": "b"}]
+        self.spec["execution"]["case_ids"] = {"gpqa": ["b", "a"]}
+        with patch("dirty_swapping.runner.load_prepared", return_value=rows):
+            selected = selected_rows(Path("."), self.spec, ["gpqa"], None)
+            self.assertEqual([row["id"] for row in selected], ["b", "a"])
+            self.spec["execution"]["case_ids"] = {"gpqa": ["missing"]}
+            with self.assertRaises(ValueError):
+                selected_rows(Path("."), self.spec, ["gpqa"], None)
+
+    def test_explicit_cohort_never_claims_full_default_suite(self):
+        tasks = self.spec["data"]["default_datasets"]
+        self.spec["execution"]["case_ids"] = {task: [task + "-one"] for task in tasks}
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            spec = runtime_spec(self.spec, work, device="cpu")
+
+            def prepared(work_dir, config, task):
+                return [{**self.row, "task": task, "id": task + "-one"}]
+
+            with patch("dirty_swapping.runner.load_prepared", side_effect=prepared):
+                run = create_run(work, spec, tasks, run_name="explicit-subset")
+                result = execute(run, work, backend_factory=FakeBackend)
+                self.assertTrue(result["complete"])
+                self.assertFalse(result["default_suite_complete"])
+                self.assertIsNone(result["primary_macro_accuracy"])
 
     def test_run_resume_and_report(self):
         with tempfile.TemporaryDirectory() as directory:

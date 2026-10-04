@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -115,6 +116,28 @@ class TransformersBackend:
             int(token)
             for token in self.torch.topk(state.next_logits.float(), count).indices.tolist()
         ]
+
+    def numeric_ambiguity(self, state: DecodeState, min_ratio: float) -> dict | None:
+        """Find a concrete numeric top-1/top-2 fork without treating confidence as truth."""
+        values, indices = self.torch.topk(state.next_logits.float(), 2)
+        tokens = [int(token) for token in indices.tolist()]
+        texts = [
+            self.tokenizer.decode([token], skip_special_tokens=False).strip() for token in tokens
+        ]
+        if (
+            any(re.fullmatch(r"[+-]?\d+(?:\.\d+)?", text) is None for text in texts)
+            or texts[0] == texts[1]
+        ):
+            return None
+        ratio = float((values[1] - values[0]).exp().item())
+        if ratio < min_ratio:
+            return None
+        return {
+            "policy": "numeric_ambiguity",
+            "top_tokens": tokens,
+            "top_texts": texts,
+            "top2_ratio": ratio,
+        }
 
     def step(self, state: DecodeState, token: int) -> DecodeState:
         if len(state.ids) + 1 > self.config["max_context_tokens"]:

@@ -1,5 +1,6 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import torch
 
@@ -46,6 +47,20 @@ class TinyCausalModel:
 
 
 class BackendTests(unittest.TestCase):
+    def test_numeric_trigger_uses_distinct_numeric_tokens_and_ratio(self):
+        backend = TransformersBackend(
+            {"device": "cpu", "threads": 1, "max_context_tokens": 32},
+            model=TinyCausalModel(),
+            tokenizer=TinyTokenizer(),
+        )
+        state = backend.prefill({"question": "Q", "answer_format": "math"})
+        self.assertEqual(backend.numeric_ambiguity(state, 0.1)["top_tokens"], [7, 8])
+        self.assertIsNone(backend.numeric_ambiguity(state, 0.5))
+        with patch.object(backend.tokenizer, "decode", return_value="word"):
+            self.assertIsNone(backend.numeric_ambiguity(state, 0.1))
+        with patch.object(backend.tokenizer, "decode", side_effect=["7", " 7"]):
+            self.assertIsNone(backend.numeric_ambiguity(state, 0.1))
+
     def test_baseline_matches_plain_autoregression(self):
         backend = TransformersBackend(
             {"device": "cpu", "threads": 1, "max_context_tokens": 32},
@@ -71,16 +86,25 @@ class BackendTests(unittest.TestCase):
 
         torch.manual_seed(0)
         config = Qwen3Config(
-            vocab_size=128, hidden_size=64, intermediate_size=128,
-            num_hidden_layers=2, num_attention_heads=4, num_key_value_heads=2,
-            head_dim=16, max_position_embeddings=64, eos_token_id=99,
+            vocab_size=128,
+            hidden_size=64,
+            intermediate_size=128,
+            num_hidden_layers=2,
+            num_attention_heads=4,
+            num_key_value_heads=2,
+            head_dim=16,
+            max_position_embeddings=64,
+            eos_token_id=99,
         )
         backend = TransformersBackend(
             {"device": "cpu", "threads": 1, "max_context_tokens": 64},
-            model=Qwen3ForCausalLM(config), tokenizer=TinyTokenizer(),
+            model=Qwen3ForCausalLM(config),
+            tokenizer=TinyTokenizer(),
         )
         self.assertFalse(backend.model.training)
-        self.assertTrue(all(not parameter.requires_grad for parameter in backend.model.parameters()))
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in backend.model.parameters())
+        )
         weights_before = {
             name: parameter.detach().clone() for name, parameter in backend.model.named_parameters()
         }
@@ -135,13 +159,25 @@ class BackendTests(unittest.TestCase):
     def test_runner_uses_transformers_adapter_contract(self):
         backend = TransformersBackend(
             {"device": "cpu", "threads": 1, "max_context_tokens": 32},
-            model=TinyCausalModel(), tokenizer=TinyTokenizer(),
+            model=TinyCausalModel(),
+            tokenizer=TinyTokenizer(),
         )
         spec = load_spec()
-        spec["generation"].update(max_input_tokens=8, max_new_tokens=8,
-                                  branch_after_reasoning_tokens=2, rollout_tokens=2, delay_tokens=2)
-        row = {"id": "tiny", "task": "gpqa", "question": "Q", "answer_format": "choice",
-               "gold": "B", "choices": ["A", "B", "C", "D"]}
+        spec["generation"].update(
+            max_input_tokens=8,
+            max_new_tokens=8,
+            branch_after_reasoning_tokens=2,
+            rollout_tokens=2,
+            delay_tokens=2,
+        )
+        row = {
+            "id": "tiny",
+            "task": "gpqa",
+            "question": "Q",
+            "answer_format": "choice",
+            "gold": "B",
+            "choices": ["A", "B", "C", "D"],
+        }
         baseline = run_case(backend, row, spec, "baseline")
         swapped = run_case(backend, row, spec, "swap")
         self.assertEqual(baseline["generated_tokens"], 8)

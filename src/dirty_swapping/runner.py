@@ -74,6 +74,13 @@ def selected_rows(
             for row in load_prepared(work_dir, spec, task)
             if row.get("split", "evaluation") == split
         ]
+        requested = spec.get("execution", {}).get("case_ids", {}).get(task)
+        if requested is not None:
+            lookup = {row["id"]: row for row in prepared}
+            missing = set(requested) - set(lookup)
+            if missing:
+                raise ValueError(f"requested IDs absent from {task}/{split}: {sorted(missing)}")
+            prepared = [lookup[case_id] for case_id in requested]
         if limit is not None:
             prepared = prepared[:limit]
         rows.extend(prepared)
@@ -181,21 +188,63 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
     if state.prompt_length > gen["max_input_tokens"]:
         raise ValueError("prompt exceeds configured input cap")
     branch_after = gen["branch_after_reasoning_tokens"]
-    branch_position = state.prompt_length + branch_after
-    swap_event = {"swapped": False, "reason": "reasoning_ended_before_branch"}
+    policy = gen.get("branch_policy", "fixed")
+    branch_position = state.prompt_length + branch_after if policy == "fixed" else None
+    swap_event = {
+        "swapped": False,
+        "reason": "reasoning_ended_before_branch" if policy == "fixed" else "no_numeric_ambiguity",
+    }
+    branched = False
+    scanned = 0
     while len(state.ids) - state.prompt_length < gen["max_new_tokens"]:
         if backend.finished(state):
             break
         generated = len(state.ids) - state.prompt_length
-        if generated == branch_after and backend.reasoning_end(state) is None:
-            if generated + gen["rollout_tokens"] + gen["delay_tokens"] <= gen["max_new_tokens"]:
+        trigger = None
+        if not branched and backend.reasoning_end(state) is None:
+            if policy == "fixed" and generated == branch_after:
+                trigger = {"policy": "fixed"}
+            elif (
+                policy == "numeric_ambiguity"
+                and row["answer_format"] == "math"
+                and branch_after <= generated <= gen["branch_scan_end"]
+            ):
+                scanned += 1
+                trigger = backend.numeric_ambiguity(state, gen["min_top2_ratio"])
+        if trigger is not None:
+            branched = True
+            branch_position = len(state.ids)
+            probe_mode = gen["alternative_selection"] == "probe_preference"
+            if arm == "swap" and probe_mode and row["answer_format"] != "math":
+                swap_event = {"swapped": False, "reason": "probe_math_only"}
+                backend.advance(state, 1)
+                continue
+            probe_budget = gen["probe"]["tokens"] if probe_mode and arm == "swap" else 0
+            if (
+                generated + gen["rollout_tokens"] + gen["delay_tokens"] + probe_budget
+                <= gen["max_new_tokens"]
+            ):
                 plan = SwapPlan(
                     branch_position=branch_position,
                     rollout_tokens=gen["rollout_tokens"],
                     delay_tokens=gen["delay_tokens"],
                     candidate_count=gen["candidate_count"],
                 )
-                event = intervene(backend, state, plan, enabled=arm == "swap")
+                judge = None
+                if probe_mode and arm == "swap":
+                    from .preference import ProbePreferenceJudge
+
+                    judge = ProbePreferenceJudge(backend, gen["probe"])
+                event = intervene(
+                    backend,
+                    state,
+                    plan,
+                    enabled=arm == "swap",
+                    selection=gen["alternative_selection"],
+                    probe_config=gen.get("probe"),
+                    question=row["question"],
+                    judge=judge,
+                )
                 state = event.state
                 swap_event = {
                     "swapped": event.swapped,
@@ -205,6 +254,10 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
                     "alternative_rollout_s": event.alternative_rollout_s,
                     "swap_copy_s": event.swap_copy_s,
                     "candidate_count_evaluated": event.candidate_count_evaluated,
+                    "probe_s": event.probe_s,
+                    "judge_s": event.judge_s,
+                    "judgment": event.judgment,
+                    "trigger": trigger,
                 }
                 continue
             swap_event = {"swapped": False, "reason": "insufficient_output_budget"}
@@ -236,6 +289,7 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
         "generated_tokens": len(state.ids) - state.prompt_length,
         "latency_s": latency,
         "branch_position": branch_position,
+        "branch_scan_tokens": scanned,
         "peak_cuda_memory_mib": (
             backend.peak_memory_mib() if hasattr(backend, "peak_memory_mib") else None
         ),
@@ -311,8 +365,18 @@ def _execute_locked(run: Path, work_dir: Path, *, backend_factory) -> dict:
                         + (spec["generation"]["candidate_count"] - 1 if arm == "swap" else 0)
                         * spec["generation"]["rollout_tokens"]
                     )
+                    if (
+                        arm == "swap"
+                        and spec["generation"]["alternative_selection"] == "probe_preference"
+                    ):
+                        probe = spec["generation"]["probe"]
+                        target_steps += probe["tokens"] + 2 * (
+                            probe["judge_input_cap"] + probe["judge_reasoning_tokens"] + 16
+                        )
+
                     def progress():
                         return getattr(backend, "forward_steps", 0) - before_steps, target_steps
+
                     with _heartbeat(
                         f"processing {row['id']} {arm}",
                         log,
@@ -418,6 +482,12 @@ def report(run: Path) -> dict:
                     if cases
                     else None
                 ),
+                "mean_probe_s": statistics.mean(row["swap"].get("probe_s", 0) for row in cases)
+                if cases
+                else None,
+                "mean_judge_s": statistics.mean(row["swap"].get("judge_s", 0) for row in cases)
+                if cases
+                else None,
                 "swap_rate": (
                     sum(row["swap"]["swapped"] for row in cases) / len(cases) if cases else None
                 ),
@@ -445,6 +515,7 @@ def report(run: Path) -> dict:
         summary["complete"]
         and plan["limit"] is None
         and plan["split"] == "evaluation"
+        and not plan["config"]["execution"].get("case_ids")
         and set(tasks) == set(plan["config"]["data"]["default_datasets"])
     )
     if summary["complete"]:

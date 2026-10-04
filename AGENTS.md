@@ -1,5 +1,6 @@
 # Dirty Swapping repository
 
+- Research changes and pushes belong on `changho`. The shared official `main` tree is the pre-research `b63bb2b` version (restored by revert `63fe8a9`); promote research to `main` only after an explicit release instruction.
 - Follow `docs/method.md` for the one-swap invariant: replace an equal-length past KV span across every attention layer and preserve all downstream text and KV exactly.
 - Keep model, dataset, and runtime defaults in `src/dirty_swapping/default.json`; source checksums are in `src/dirty_swapping/datasets.json`.
 - Use a project-local `uv` environment. Generated data goes into ignored `inputs/`, `intermediates/`, `outputs/`, `logs/`, and `temp/` as appropriate.

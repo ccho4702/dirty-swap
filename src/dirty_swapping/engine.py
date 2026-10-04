@@ -34,6 +34,9 @@ class InterventionResult:
     alternative_rollout_s: float = 0.0
     swap_copy_s: float = 0.0
     candidate_count_evaluated: int = 1
+    probe_s: float = 0.0
+    judge_s: float = 0.0
+    judgment: dict | None = None
 
 
 def intervene(
@@ -42,6 +45,10 @@ def intervene(
     plan: SwapPlan,
     *,
     enabled: bool,
+    selection: str = "second_highest_first_token_probability",
+    probe_config: dict | None = None,
+    question: str = "",
+    judge=None,
 ) -> InterventionResult:
     """Commit top-1 rollout, then optionally transplant top-2 KV after a delay.
 
@@ -51,6 +58,10 @@ def intervene(
     """
     if adapter.sequence_length(prefix_state) != plan.branch_position:
         raise ValueError("prefix length must equal absolute branch position")
+    if selection not in ("second_highest_first_token_probability", "probe_preference"):
+        raise ValueError("unknown alternative selector")
+    if enabled and selection == "probe_preference" and (probe_config is None or judge is None):
+        raise ValueError("probe selection requires configuration and a judge")
     expected = plan.candidate_count if enabled else 1
     top = adapter.top_tokens(prefix_state, expected)
     if len(top) < expected or len(set(top)) != len(top):
@@ -124,6 +135,26 @@ def intervene(
     if reasoning_end is not None and plan.swap_after_position >= reasoning_end:
         return InterventionResult(
             main, False, "reasoning_ended", top[0], top[1], alternative_rollout_s, 0.0, expected
+        )
+
+    if selection == "probe_preference":
+        from .probe_selection import choose_probe
+
+        chosen = choose_probe(
+            adapter, main, adapter.cache(alternative), plan, question, probe_config, judge
+        )
+        return InterventionResult(
+            chosen.state,
+            chosen.swapped,
+            chosen.reason,
+            top[0],
+            top[1],
+            alternative_rollout_s,
+            chosen.copy_seconds,
+            expected,
+            probe_s=chosen.probe_seconds,
+            judge_s=chosen.judgment.get("seconds", 0.0),
+            judgment=chosen.judgment,
         )
 
     adapter.synchronize()

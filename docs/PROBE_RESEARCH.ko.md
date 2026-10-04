@@ -1,0 +1,55 @@
+# 실제 교체 상태의 probe 선택기 — changho 연구
+
+공식 `main`의 파일 상태는 연구 계획 push 이전 `b63bb2b`와 동일하게 복원했다. 이후 연구는 `changho`에서 진행하며, 아래 방법은 공식 baseline의 검증된 성능을 대체하는 결과가 아니다.
+
+## 방법
+
+현재 probe 선택기는 수학 QA만 지원한다. 같은 prefix에서 top-1과 top-2의 32토큰 rollout을 만들고 top-1으로 주 경로를 이어간다. reasoning 256토큰에서 분기한 뒤 rollout과 128토큰 지연이 끝나면, 현재 cache의 사본 두 개를 만든다. 하나는 no-swap, 다른 하나는 과거 32토큰 KV만 대안으로 교체한다. 기존 텍스트와 그 구간 뒤의 KV는 보존한다.
+
+두 trial에서 새 미래 64토큰을 생성한다. 첫 미래 토큰은 기존 logits를 사용하므로, 실제 교체 효과는 그 뒤 토큰에서 나타날 수 있다. 미래 토큰열이 같으면 교체를 거부하고 judge를 실행하지 않는다. 다르면 질문, 기존 reasoning의 마지막 256토큰, 두 미래 텍스트만 같은 frozen 모델의 judge에 준다. gold answer는 전달하지 않는다.
+
+judge는 최대 128토큰으로 계산·논리적 진전을 비교한 뒤 `A`, `B`, 동률 `T`에 대한 조건부 점수를 낸다. 후보 순서를 뒤집어 두 번 판단하며, 두 판단 모두 대안이 원래 경로와 동률보다 최소 0.15 높은 점수일 때만 교체를 채택한다. 이 점수는 **정답 확률로 보정된 값이 아니다**. 입력 상한 초과, 판단 불일치, 동률은 no-swap을 택한다. 선택된 trial의 probe와 cache를 그대로 이어 써서 미래를 다시 생성하지 않는다.
+
+## scorer gate
+
+실제 QA를 대량 실행하기 전에 간단한 산술·비율 예시를 검사했다. 기대 선택 라벨은 judge 호출 뒤에만 평가에 사용했다.
+
+| 버전 | 올바른 수정 채택 | 해로운 수정 거부 | 동률 거부 | 결정 |
+| --- | --- | --- | --- | --- |
+| reasoning 없는 직접 점수 | 4/6 | 6/6 | 4/4 | 실패 |
+| 일반 프롬프트 + 판단 64토큰 | 2/6 | 6/6 | 4/4 | 실패 |
+| 계산부터 확인하는 프롬프트 + 256토큰 | 6/6 | 6/6 | 4/4 | gate 통과, 비용 큼 |
+| 새로운 숫자·잘못된 이전 reasoning + 128토큰 | 6/6 | 6/6 | 4/4 | 별도 gate 통과 |
+| 패키지 구현의 재현 검사 | 6/6 | 6/6 | 4/4 | gate 통과 |
+
+128토큰 별도 gate의 16개 비교에는 약 165초, 패키지 검사에는 약 167초가 들었다. 한 비교는 두 후보 순서의 판단을 포함한다. 이 작은 합성 gate는 명백한 오류와 위치 편향을 걸러내는 최소 조건이며, QA 정확도 개선의 증거가 아니다.
+
+```bash
+uv run --frozen python scripts/verify_probe_judge.py --run-name judge-check
+# 중단 후: 같은 config와 source에서
+uv run --frozen python scripts/verify_probe_judge.py --resume outputs/judge-checks/judge-check
+
+uv run --frozen dirty-swapping run --datasets gsm8k --split development --limit 4 \
+  --config configs/probe-preference.json --run-name probe-dev4
+```
+
+## 검사와 비용
+
+단위 검사에서는 선택/거부/동일 probe, 순서 편향, 긴 judge 입력 거부, 원래 cache와 suffix 보존, 선택된 probe의 commit, 출력 예산 검사를 확인한다. 실제 GPU smoke에서는 선택기가 no-swap을 고르는 경로도 실행됐다.
+
+`report.json`의 `mean_probe_s`는 두 trial 생성과 임시 cache 복사 시간을 포함한다. 선택된 trial의 미래 생성은 최종 생성의 일부이므로 전부 추가 overhead인 것은 아니다. `mean_judge_s`와 `mean_alternative_rollout_s`를 별도로 보고 전체 `latency_s`로 비용을 판단한다. raw case에는 두 probe, 판단용 reasoning, 순서별 점수, 최종 선택이 저장된다.
+
+동일 모델 judge가 실제 오류를 놓치거나, 잘린 미래를 평가할 근거를 찾지 못할 수 있다. no-swap 선택지가 있어도 성능 보존은 보장되지 않는다. 고정된 개발 cohort에서 실제 swap 채택 수, 답 완주율, paired wins/losses와 시간을 확인한 후 필요한 변경 하나만 진행한다.
+
+## 고정 분기의 첫 실제 결과
+
+seed로 정해진 GSM8K train 첫 4문제에서 baseline과 선택기 모두 4/4 정답이었다. 그러나 선택기는 4개 모두 교체를 거부했고, 평균 시간은 67.8초에서 81.7초로 약 20.5% 증가했다. 이 설정의 표본을 늘리지 않는다. 기록된 두 probe는 대부분 같은 추론의 재표현이거나 계산을 시작하기 전의 fragment여서, 고정 256토큰 분기가 유용한 대안을 준비하지 못하는 것이 구체적 실패였다.
+
+다음 변경은 `configs/probe-numeric.json`의 `numeric_ambiguity` 분기다. reasoning 64–1,536토큰에서 top-1/top-2가 서로 다른 숫자 문자열이고 상대 확률 비율이 0.05 이상인 최초 지점에서 분기한다. 비율은 후보 plausibility 기준이며 정확도 신호가 아니다. 해당 지점이 없으면 교체하지 않는다. 그 밖의 rollout 32·지연 128·probe 64·judge 128은 유지한다.
+
+`configs/probe-numeric-dev4.json`에는 결과를 보기 전에 고정한 개발 cohort ID가 있다: 기존 두 control `gsm8k-train-1292`, `gsm8k-train-3522`와 train 입력 길이 상위 두 문항 `gsm8k-train-3331`, `gsm8k-train-1202`다. 긴 문항은 gold나 baseline 성공 여부를 보고 선택하지 않았다. `execution.case_ids`는 지정된 split에 없는 ID를 거부하며, 이 부분 cohort가 완료돼도 full-suite primary score를 내지 않는다.
+
+```bash
+uv run --frozen dirty-swapping run --datasets gsm8k --split development \
+  --config configs/probe-numeric-dev4.json --run-name numeric-dev4
+```
