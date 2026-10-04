@@ -18,6 +18,7 @@ class GenerationAdapter(Protocol):
     def top_tokens(self, state: Any, count: int) -> list[int]: ...
     def rollout(self, state: Any, first_token: int, total_tokens: int) -> Any: ...
     def guided_rollout(self, state: Any, prefix: str, total_tokens: int) -> Any: ...
+    def soft_rollout(self, state: Any, total_tokens: int, config: dict, seed: int) -> Any: ...
     def advance(self, state: Any, token_count: int) -> Any: ...
     def cache(self, state: Any) -> Any: ...
     def reasoning_end(self, state: Any) -> int | None: ...
@@ -52,6 +53,8 @@ def intervene(
     question: str = "",
     judge=None,
     alternative_prefix: str | None = None,
+    soft_config: dict | None = None,
+    seed: int = 0,
 ) -> InterventionResult:
     """Commit top-1 rollout, then optionally transplant top-2 KV after a delay.
 
@@ -65,8 +68,11 @@ def intervene(
         "second_highest_first_token_probability",
         "probe_preference",
         "guided_swap",
+        "soft_swap",
     ):
         raise ValueError("unknown alternative selector")
+    if selection == "soft_swap" and (soft_config is None or plan.candidate_count != 2):
+        raise ValueError("soft swap requires one donor and its configuration")
     if selection == "guided_swap" and (not alternative_prefix or plan.candidate_count != 2):
         raise ValueError("guided swap requires one alternative and its prefix")
     if enabled and selection == "probe_preference" and (probe_config is None or judge is None):
@@ -94,7 +100,12 @@ def intervene(
         adapter.synchronize()
         started = time.monotonic()
         for index, token in enumerate(top[1:expected], 1):
-            if selection == "guided_swap":
+            if selection == "soft_swap":
+                candidate = adapter.soft_rollout(
+                    adapter.fork(prefix_state), plan.rollout_tokens, soft_config, seed
+                )
+                alternative_token = candidate.ids[plan.branch_position]
+            elif selection == "guided_swap":
                 candidate = adapter.guided_rollout(
                     adapter.fork(prefix_state), alternative_prefix, plan.rollout_tokens
                 )
@@ -189,13 +200,15 @@ def intervene(
     return InterventionResult(
         main,
         True,
-        "guided_swapped" if selection == "guided_swap" else "swapped",
+        {"guided_swap": "guided_swapped", "soft_swap": "soft_swapped"}.get(selection, "swapped"),
         top[0],
         alternative_token,
         alternative_rollout_s,
         time.monotonic() - copy_started,
         expected,
         alternative_ids=(
-            alternative.ids[plan.branch_position :] if selection == "guided_swap" else None
+            alternative.ids[plan.branch_position :]
+            if selection in ("guided_swap", "soft_swap")
+            else None
         ),
     )

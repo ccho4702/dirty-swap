@@ -68,6 +68,7 @@ def validate_spec(spec: dict) -> dict:
         "probe_preference",
         "guided_swap",
         "draft_swap",
+        "soft_swap",
     ):
         raise ValueError("unsupported alternative selector")
     if gen["alternative_selection"] == "guided_swap":
@@ -80,6 +81,21 @@ def validate_spec(spec: dict) -> dict:
             raise ValueError("guided swap requires a nonempty alternative_prefix")
     elif "alternative_prefix" in gen:
         raise ValueError("alternative_prefix requires guided_swap")
+    if gen["alternative_selection"] == "soft_swap":
+        soft = gen["soft"]
+        if gen["candidate_count"] != 2:
+            raise ValueError("soft swap uses the main path and one soft donor")
+        if type(soft["top_k"]) is not int or soft["top_k"] < 1:
+            raise ValueError("soft.top_k must be a positive integer")
+        for key in ("temperature", "soft_temperature", "top_p"):
+            if (
+                type(soft[key]) not in (int, float)
+                or not math.isfinite(soft[key])
+                or soft[key] <= 0
+            ):
+                raise ValueError(f"soft.{key} must be finite and positive")
+        if soft["top_p"] > 1:
+            raise ValueError("soft.top_p must not exceed one")
     if gen["alternative_selection"] == "draft_swap":
         draft = gen["draft"]
         child = {**model, **draft["model"], "enable_thinking": False}

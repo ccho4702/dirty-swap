@@ -275,6 +275,8 @@ def run_case(
                     question=row["question"],
                     judge=judge,
                     alternative_prefix=alternative_prefix,
+                    soft_config=gen.get("soft"),
+                    seed=case_seed,
                 )
                 state = event.state
                 swap_event = {
@@ -290,6 +292,7 @@ def run_case(
                     "judgment": event.judgment,
                     "trigger": trigger,
                     "candidate_generation": gen["alternative_selection"],
+                    "alternative_text_is_proxy": gen["alternative_selection"] == "soft_swap",
                     "rollout_tokens": actual_rollout,
                     "draft": draft,
                     "draft_s": draft["seconds"] if draft is not None else 0.0,

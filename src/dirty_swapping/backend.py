@@ -171,6 +171,52 @@ class TransformersBackend:
         tail = self.tokenizer.decode(state.ids[-16:], skip_special_tokens=False)
         return {"policy": "reasoning_step"} if re.search(r"\n\s*$", tail) else None
 
+    def soft_rollout(
+        self, state: DecodeState, total_tokens: int, config: dict, seed: int
+    ) -> DecodeState:
+        """Build a donor from randomized embedding mixtures; IDs are diagnostic proxies."""
+        torch = self.torch
+        generator = torch.Generator(device=self.device).manual_seed(seed)
+        embeddings = self.model.get_input_embeddings()
+        for _ in range(total_tokens):
+            if self.finished(state) or self.reasoning_end(state) is not None:
+                break
+            if len(state.ids) + 1 > self.config["max_context_tokens"]:
+                raise ValueError("generation exceeds context")
+            with torch.inference_mode():
+                scores, ids = torch.topk(
+                    state.next_logits.float() / config["temperature"],
+                    min(config["top_k"], state.next_logits.numel()),
+                )
+                # Preserve greedy tie-breaking, including the top_k=1 identity control.
+                if config["top_k"] == 1:
+                    ids = torch.argmax(state.next_logits).reshape(1)
+                probabilities = scores.softmax(-1)
+                remove = probabilities.cumsum(-1) - probabilities >= config["top_p"]
+                scores = scores.masked_fill(remove, -torch.inf)
+                uniform = torch.rand(scores.shape, device=self.device, generator=generator)
+                uniform = uniform.clamp(
+                    torch.finfo(torch.float32).tiny, 1 - torch.finfo(torch.float32).eps
+                )
+                noise = -torch.log(-torch.log(uniform))
+                weights = ((scores + noise) / config["soft_temperature"]).softmax(-1)
+                proxy = int(ids[weights.argmax()].item())
+                if proxy in self.eos_ids or proxy == self.think_end_id:
+                    self.step(state, proxy)
+                    break
+                mixed = (embeddings(ids).float() * weights[:, None]).sum(0)
+                output = self.model(
+                    inputs_embeds=mixed.to(embeddings.weight.dtype).reshape(1, 1, -1),
+                    past_key_values=state.cache,
+                    use_cache=True,
+                    logits_to_keep=1,
+                )
+            state.cache = output.past_key_values
+            state.ids.append(proxy)
+            state.next_logits = output.logits[0, -1].detach()
+            self.forward_steps += 1
+        return state
+
     def guided_rollout(self, state: DecodeState, prefix: str, total_tokens: int) -> DecodeState:
         """Teacher-force a short alternative step, then finish the equal-length span."""
         tokens = self.tokenizer.encode(prefix, add_special_tokens=False)
