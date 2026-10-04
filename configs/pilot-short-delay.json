@@ -1,0 +1,39 @@
+{
+  "protocol": "dirty-swapping-v1",
+  "model": {
+    "name": "Qwen/Qwen3-4B-Thinking-2507",
+    "revision": "768f209d9ea81521153ed38c47d515654e938aea",
+    "dtype": "bfloat16",
+    "device": "cuda:0",
+    "enable_thinking": true,
+    "threads": 4,
+    "gpu_memory_fraction": 0.95,
+    "prefill_chunk_tokens": 256,
+    "local_files_only": true,
+    "max_context_tokens": 8704
+  },
+  "generation": {
+    "max_input_tokens": 4608,
+    "max_new_tokens": 4096,
+    "seed": 18,
+    "candidate_count": 2,
+    "branch_after_reasoning_tokens": 256,
+    "rollout_tokens": 32,
+    "delay_tokens": 16,
+    "max_swaps_per_trace": 1,
+    "alternative_selection": "second_highest_first_token_probability"
+  },
+  "data": {
+    "prompt_limit": 4608,
+    "shuffle_seed": 18,
+    "default_datasets": [
+      "aime25",
+      "hmmt25",
+      "gsm8k",
+      "gpqa"
+    ]
+  },
+  "execution": {
+    "progress_interval_seconds": 15
+  }
+}

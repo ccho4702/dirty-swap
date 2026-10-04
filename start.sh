@@ -19,6 +19,7 @@ cat <<'EOF'
   docs/competition.md               답 추출·채점, 시간 측정, 공정 비교 규칙
   docs/method.md                    현재 KV 교체 방법과 baseline 조건
   docs/implementation.md            실제 검증 결과와 아직 검증되지 않은 범위
+  docs/RESEARCH_PLAN.ko.md          시간 제한 아래의 실험 우선순위와 중단 기준
   docs/proposal.pdf                 Group 18 프로젝트 제안서
   skills/onboard-dirty-swapping/   코딩 에이전트용 온보딩 SKILL.md
 
