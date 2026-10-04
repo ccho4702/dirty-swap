@@ -63,3 +63,24 @@ uv run --frozen dirty-swapping run --config configs/closed-donor-transfer6.json 
 읽고, 결과는 case/arm 단위로 원자적으로 저장한다. 중단한 case는 같은 seed의
 prompt부터 재생하며 완료된 case는 건너뛴다. source/config/runtime을 바꾸면 재개를
 거부한다. main text를 직접 종료시키는 별도 비교군은 아직 구현하지 않았다.
+
+## 완료된 개발 진단
+
+동일 sampling·seed·8,192-token 조건에서 정답은 1/1→1/1이었다.
+생성 길이는 8,136→4,288토큰, 전체 시간은 329.05→174.89초(-46.8%)였다.
+초안 생성·재인코딩·교체 비용을 포함한 시간이다. 개발 문항의 속도 결과이며,
+정확도 상승이나 독립 평가의 개선으로 세지 않는다.
+
+순정의 전체 8,136-token 생성 문자열이 이전 native `generate` 기록과 일치했다.
+별도로 GPQA 입력 82토큰과 LongBenchV2 입력 4,577토큰에서 첫 64개의 sampled
+출력이 native 생성과 일치했다. 이는 해당 입력의 decoding 검증이며 QA 점수가 아니다.
+
+교체 출력은 마지막에 명시적인 boxed answer와 EOS를 생성했지만 visible
+`</think>`를 생성하지 않았다. 기존 scorer는 EOS로 끝난 응답의 마지막 boxed
+answer를 채점하며 양쪽에 같은 규칙을 적용한다. 따라서 `eos_ended=true`와
+`thinking_complete=false`를 함께 기록했다. closing tag를 전제로 출력 내용을
+분리하는 downstream client에서는 이 형식 차이를 처리해야 한다.
+
+측정과 검증은 [공개 개발 요약](../outputs/closed-donor-development-summary-20261005/summary.json)에
+보존했다. 원문 reasoning이나 정답 label은 포함하지 않는다. 사전 고정한 새 6문항
+평가는 `outputs/closed-donor-transfer6-20261005`에서 진행 중이다.

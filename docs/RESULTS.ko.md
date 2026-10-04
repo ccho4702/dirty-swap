@@ -17,6 +17,12 @@ MATH-500 4개와 GPQA 2개를 사전 고정하고 양쪽 모두 greedy/8,192토�
 [잔차 교체 기록](RESIDUAL_RESEARCH.ko.md), 측정값과 검증은
 [공개 JSON](../outputs/residual-swap-summary-20261005/summary.json)에 있다.
 
+새 [완료된 답변 KV 재사용](CLOSED_DONOR_RESEARCH.ko.md)은 matched sampling을
+양쪽에 사용한다. 개발 1문항에서 정답 1/1→1/1, 생성 8,136→4,288토큰,
+전체 시간 329.05→174.89초였다. 정확도 상승은 아직 아니다. 전체 순정 출력의
+native 일치와 cache 보존을 확인했으며, [공개 개발 요약](../outputs/closed-donor-development-summary-20261005/summary.json)에
+조건과 검증을 보존했다. 미사용 수학 4개와 GPQA 2개로 독립 확인을 진행한다.
+
 ## 실행 조건
 
 RTX 3090 24 GiB, BF16, Transformers 4.57.1, Torch 2.6.0, seed 18. 측정한 package revision은 `9f65ce8`이며 [공개 결과 JSON](../outputs/research-summary-20261004/summary.json)에 각 run의 source manifest digest, model revision, runtime, 문제별 결과와 원래 보고서의 metrics를 보존했다. 정답 라벨과 문제 원문은 포함하지 않는다.
