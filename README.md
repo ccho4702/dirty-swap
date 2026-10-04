@@ -58,8 +58,6 @@ The official runner uses `math-verify` for math and explicit final-choice extrac
 
 The **research theme** is reuse of otherwise discarded tokens or continuations. The current one-swap method is a starting baseline, not a limit on experiments. Participants may vary settings and develop new reuse strategies; compare each variant with plain inference under the same model and evaluation conditions. The current v1 code fixes top-2 selection, one swap per trace, and full-attention `DynamicCache`, so broader strategies require code changes.
 
-For the current limited-compute experiment order and stopping criteria, see [the research plan](docs/RESEARCH_PLAN.ko.md). The first pilot uses `configs/pilot-short-delay.json` on the GSM8K development split.
-
 ## Layout
 
 | Path | Purpose |
