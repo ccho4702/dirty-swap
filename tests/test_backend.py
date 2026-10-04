@@ -68,6 +68,7 @@ class BackendTests(unittest.TestCase):
         self.assertTrue(swapped.swapped)
         self.assertEqual(swapped.reason, "guided_swapped")
         self.assertEqual(swapped.alternative_token, 9)
+        self.assertEqual(swapped.alternative_ids, [9, 7])
         self.assertEqual(swapped.state.ids, baseline.state.ids)
         layer = swapped.state.cache.layers[0]
         self.assertEqual(layer.keys.flatten().tolist(), [1, 1, 1, 9, 7, 7, 7])

@@ -62,3 +62,7 @@ uv run --frozen dirty-swapping report --run outputs/first-smoke
 큰 틀은 **선택되지 않아 버려질 토큰 또는 경로의 정보를 재사용한다**는 것입니다. 그 안에서 분기 기준, 후보 수와 길이, 대안 선택기, 교체 위치와 횟수, KV를 쓰는 방식, 모델·프롬프트·데이터셋 등을 탐색할 수 있습니다. 다만 **현재 v1 실행 코드가 곧바로 지원하는 범위**는 후보 수·rollout 길이·분기 offset·지연·토큰 상한·모델 경로 같은 설정값의 변경입니다. 대안 선택은 top-2, 교체는 trace당 1회, full-attention `DynamicCache`라는 제약이 있습니다. 다른 선택기·여러 번 교체·다른 cache 구조는 `engine.py`, `cache.py`, `backend.py`의 구현과 검증을 바꿔야 합니다.
 
 연구 설정을 자유롭게 바꾸더라도 **그 설정과 정확히 맞는 순정 경로**를 같이 실행해 개선이 재사용 방법에서 왔는지 확인하세요. 모델이나 학습 방식까지 바꾼다면 변화 내용을 따로 공개해 모델 자체의 이득과 재사용의 이득을 구분하세요. 첫 수정은 [default.json](../src/dirty_swapping/default.json)을 복사해 한 변수만 바꾸는 ablation부터 시작하면 결과를 읽기 쉽습니다.
+
+## changho 연구 브랜치
+
+공유된 공식 baseline은 `main`, 실험은 `changho`에서 진행합니다. 연구 브랜치에는 실제 교체 후 미래를 비교하는 `probe_preference`, 숫자 후보에서 분기하는 `numeric_ambiguity`, 줄 경계에서 계산을 유도한 대안을 만드는 `guided_swap`이 있습니다. 같은 prefix에서 준비한 대안 KV만 교체하고 기존 텍스트·suffix KV를 보존하는 조건은 같습니다. 설정·중단한 후보·개발 결과·별도 test 확인 여부는 [연구 기록](PROBE_RESEARCH.ko.md)을 보세요. 연구용 2,048토큰 예산의 결과를 공식 32,768토큰 평가 점수로 섞지 않습니다.

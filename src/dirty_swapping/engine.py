@@ -38,6 +38,7 @@ class InterventionResult:
     probe_s: float = 0.0
     judge_s: float = 0.0
     judgment: dict | None = None
+    alternative_ids: list[int] | None = None
 
 
 def intervene(
@@ -194,4 +195,7 @@ def intervene(
         alternative_rollout_s,
         time.monotonic() - copy_started,
         expected,
+        alternative_ids=(
+            alternative.ids[plan.branch_position :] if selection == "guided_swap" else None
+        ),
     )

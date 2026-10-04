@@ -70,3 +70,5 @@ uv run --frozen dirty-swapping run --datasets gsm8k --split development \
 ```
 
 개발 gate에서 개선이 있으면 설정을 고정해 `configs/guided-step-heldout8.json`의 별도 test 8문제로 확인한다. test 결과를 보지 않고 seed 첫 4개와 입력 길이 상위 4개를 선택했다: 1259, 1038, 524, 379, 1077, 1209, 1199, 1176. 전체 GSM8K test 점수가 아니라 작은 독립 확인 cohort다.
+
+32토큰 guided 개발 gate에서는 baseline 2/4, swap 2/4, wins/losses 0/0이었다. 실제 교체는 4/4 실행됐고 평균 시간은 68.32→66.34초였으나 작은 표본의 시간 변동도 있어 속도 개선을 확정하지 않는다. 더 큰 표본으로 확장하지 않고 **rollout 길이만 128**로 늘린 `guided-step128-dev4.json`을 다음 gate로 고정한다. 비용 상한·질문·분기·지연·guidance는 그대로다. 대안 계산 텍스트도 raw case에 보존한다. heldout ID는 이미 정한 같은 8개를 쓰며 결과를 보고 고르지 않는다.

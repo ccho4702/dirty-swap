@@ -264,6 +264,11 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
                     "judgment": event.judgment,
                     "trigger": trigger,
                     "candidate_generation": gen["alternative_selection"],
+                    "alternative_text": (
+                        backend.tokenizer.decode(event.alternative_ids, skip_special_tokens=False)
+                        if event.alternative_ids is not None
+                        else None
+                    ),
                 }
                 continue
             swap_event = {"swapped": False, "reason": "insufficient_output_budget"}
