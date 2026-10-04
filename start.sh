@@ -23,6 +23,7 @@ cat <<'EOF'
   docs/PROBE_RESEARCH.ko.md         changho의 probe·초안 KV 연구 과정
   docs/RESULTS.ko.md                완료된 비교, 성공·실패 사례와 검증 범위
   docs/GENERAL_METHOD.ko.md         데이터셋 구분 없는 공통 정책·목적함수
+  docs/ALTERNATIVES.ko.md           새 후보의 문헌 근거와 soft KV 실험
   docs/proposal.pdf                 Group 18 프로젝트 제안서
   skills/onboard-dirty-swapping/   코딩 에이전트용 온보딩 SKILL.md
 

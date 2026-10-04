@@ -49,3 +49,21 @@ uv run --frozen dirty-swapping run --config configs/soft-swap-transfer6.json \
 ```
 
 출력마다 고정 config, source hash, 모델 revision, seed, latency, proxy 여부, swap/skip 이유가 저장된다. 대안의 생성 비용은 전체 latency에 포함한다. 성능 확인 전에 새로운 조합 grid를 확대하지 않는다.
+
+## 평가 조건에 대한 한계
+
+[공식 Qwen3-4B-Thinking-2507 모델 카드](https://huggingface.co/Qwen/Qwen3-4B-Thinking-2507)는 temperature 0.6 / top-p 0.95 / top-k 20과 일반적인 출력 32,768토큰을 권장한다. 이번 비교의 main은 기존 greedy이며 4,096토큰이다. 따라서 이 실험은 그 제한된 예산 안의 성능이며 모델의 충분한 reasoning budget에서의 정확도 평가가 아니다. 권장 sampling과 더 긴 예산을 도입할 때는 순정·교체 양쪽을 같이 바꾸고, decoding 변경 이득을 KV 교체 이득으로 보고하지 않아야 한다.
+
+## 완료된 실제 결과
+
+| 구간 | 순정 → 교체 | 평균 시간, 초 | 해석 |
+| --- | --- | --- | --- |
+| 새 GSM8K 개발 4개 | 4/4 → 4/4 | 33.85 → 36.37 | +7.5%, 정확도 상승 없음 |
+| MATH-500 확인 4개 | 1/4 → 1/4 | 142.38 → 144.49 | +1.5%, 양쪽 모두 3개는 최종 답 미완료 |
+| GPQA 확인 2개 | 1/2 → 1/2 | 142.82 → 161.45 | +13.0%, 단일 실행 시간 변동 포함 |
+
+이번 제한된 확인에서 wins/losses는 모두 0/0이다. 4B 모델의 짧은 구간 교체가 정확도를 높였다고 주장하지 않는다. 출력 상한 때문에 MATH의 충분한 reasoning-budget 성능도 판정할 수 없다. 현재 설정을 검증된 개선책으로 채택하거나 무작정 grid를 넓힐 근거는 없다.
+
+실제 GPU 36개 layer에서 단일 성분의 greedy-cache 일치, main의 기존 token ID, prefix/suffix K/V 및 기존 next logits 보존, 선택 span의 실제 변경을 확인했다. 모델 weights는 frozen이다. 원자적 QA 결과·설정·runtime과 검사를 [공개 JSON](../outputs/soft-swap-summary-20261005/summary.json)에 보존했다.
+
+후속 우선순위는 공통 sampling과 충분한 생성 예산을 양쪽에 적용한 비교, 그다음 개발 성능으로 학습하는 공통 교체 강도다. 앞선 실패 문항에 맞춘 규칙이나 inference gold 사용을 추가하지 않는다.
