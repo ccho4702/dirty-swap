@@ -1,4 +1,4 @@
-"""Resumable GPU gate for a frozen judge, using controlled math steps."""
+"""Resumable GPU gate for one common QA criterion across question types."""
 
 import argparse
 import json
@@ -16,40 +16,28 @@ from dirty_swapping.runner import _heartbeat, runtime_identity
 def cases():
     problems = [
         (
-            "There are 23 apples and 7 are eaten. How many remain?",
+            "The supplied passage says Project Sable launched in 2018. What year did it launch?",
+            "I must use the supplied passage.",
+            "Project Sable launched in 2020.",
+            "The passage states 2018, so the answer is 2018.",
+        ),
+        (
+            "Context: mitochondrial ATP synthase uses a proton gradient to synthesize ATP. What drives ATP synthesis in this description?",
+            "I must identify the stated cause.",
+            "Light directly creates glucose, which is the stated driver.",
+            "The supplied proton gradient drives ATP synthase to produce ATP.",
+        ),
+        (
+            "Context: Nora was born in Lisbon. Lisbon is in Portugal. What country was Nora born in?",
+            "I must connect the two supplied facts.",
+            "Nora was born in Spain.",
+            "Nora was born in Lisbon, which is in Portugal; therefore Portugal.",
+        ),
+        (
+            "23 apples are present and 7 are eaten. How many remain?",
             "I subtract the eaten apples.",
-            "23 minus 7 is 17.",
-            "23 minus 7 is 16.",
-        ),
-        (
-            "What is 11 times 12?",
-            "I multiply the two numbers.",
-            "11 times 12 is 122.",
-            "11 times 12 is 132.",
-        ),
-        (
-            "One third of 18 cats leave. How many remain?",
-            "I think six cats remain.",
-            "There are 6 cats remaining.",
-            "Six leave, so 18 minus 6 = 12 remain.",
-        ),
-        (
-            "An $80 item is discounted 25%. What is the final price?",
-            "I initially think the price is 20 dollars.",
-            "The final price is 80 times 0.25 = 20 dollars.",
-            "The discount is 20 dollars, so the final price is 60 dollars.",
-        ),
-        (
-            "What is 40% of 50?",
-            "I convert 40% into a decimal.",
-            "40% of 50 is 30.",
-            "0.4 times 50 is 20.",
-        ),
-        (
-            "What is three quarters of 24?",
-            "I need three fourths of 24.",
-            "Three quarters of 24 is 16.",
-            "24 divided by 4 is 6, and 6 times 3 is 18.",
+            "23 minus 7 equals 17.",
+            "23 minus 7 equals 16, so 16 remain.",
         ),
     ]
     result = []
@@ -84,7 +72,7 @@ def cases():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path("configs/probe-preference.json"))
+    parser.add_argument("--config", type=Path, default=Path("configs/general-probe.json"))
     parser.add_argument("--work-dir", type=Path, default=Path("."))
     parser.add_argument("--run-name")
     parser.add_argument("--resume", type=Path)
@@ -163,9 +151,7 @@ def main():
         summary = {
             "at": now(),
             "groups": groups,
-            "passed": groups["correct"]["passed"] >= 5
-            and groups["harm"]["passed"] == 6
-            and groups["tie"]["passed"] == 4,
+            "passed": all(result["passed"] for result in results),
             "judge_seconds": sum(r["decision"]["seconds"] for r in results),
         }
         atomic_json(root / "summary.json", summary)

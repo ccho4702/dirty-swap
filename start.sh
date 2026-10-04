@@ -20,7 +20,9 @@ cat <<'EOF'
   docs/method.md                    현재 KV 교체 방법과 baseline 조건
   docs/implementation.md            실제 검증 결과와 아직 검증되지 않은 범위
   docs/RESEARCH_PLAN.ko.md          시간 제한 아래의 실험 우선순위와 중단 기준
-  docs/PROBE_RESEARCH.ko.md         changho의 실험용 probe/no-swap 선택기
+  docs/PROBE_RESEARCH.ko.md         changho의 probe·초안 KV 연구 과정
+  docs/RESULTS.ko.md                완료된 비교, 성공·실패 사례와 검증 범위
+  docs/GENERAL_METHOD.ko.md         데이터셋 구분 없는 공통 정책·목적함수
   docs/proposal.pdf                 Group 18 프로젝트 제안서
   skills/onboard-dirty-swapping/   코딩 에이전트용 온보딩 SKILL.md
 

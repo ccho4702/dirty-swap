@@ -211,7 +211,6 @@ def run_case(
                 trigger = {"policy": "fixed"}
             elif (
                 policy == "numeric_ambiguity"
-                and row["answer_format"] == "math"
                 and branch_after <= generated <= gen["branch_scan_end"]
             ):
                 scanned += 1
@@ -224,13 +223,6 @@ def run_case(
             branch_position = len(state.ids)
             probe_mode = gen["alternative_selection"] == "probe_preference"
             draft_mode = gen["alternative_selection"] == "draft_swap"
-            if arm == "swap" and (probe_mode or draft_mode) and row["answer_format"] != "math":
-                swap_event = {
-                    "swapped": False,
-                    "reason": "draft_math_only" if draft_mode else "probe_math_only",
-                }
-                backend.advance(state, 1)
-                continue
             draft = None
             actual_rollout = gen["rollout_tokens"]
             alternative_prefix = gen.get("alternative_prefix")

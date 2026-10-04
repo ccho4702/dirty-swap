@@ -74,3 +74,9 @@ For the current limited-compute experiment order and stopping criteria, see [the
 | `tests/`, `examples/` | CPU checks and synthetic submission example |
 | `inputs/`, `intermediates/`, `outputs/`, `logs/`, `models/` | Ignored generated artifacts |
 | `temp/` | Ignored recovery snapshots and scratch work |
+
+## Research branch results
+
+Research runs and changes are on `changho`; the shared official `main` file tree is preserved. See [the completed research results](docs/RESULTS.ko.md) for matched QA and latency comparisons, individual regressions, draft-only controls, and the 36-layer GPU cache verification. Small development gains did not increase aggregate accuracy on either independent 8-question cohort; these are not full-suite results.
+
+The current research path uses one [dataset-independent QA policy](docs/GENERAL_METHOD.ko.md): native alternatives, actual edited-cache future comparison, and a common grounding/reasoning/progress criterion with no-swap. `configs/general-probe.json` applies the same method to all seven supported datasets. Math-only policy gates were removed; old mathematical prompt variants remain documented exploratory controls. A learned general QA value function and transfer gains are not established yet.

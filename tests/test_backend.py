@@ -47,6 +47,50 @@ class TinyCausalModel:
 
 
 class BackendTests(unittest.TestCase):
+    def test_same_probe_policy_runs_for_math_and_choice_without_task_gates(self):
+        spec = load_spec()
+        spec["model"].update(max_context_tokens=64, device="cpu", dtype="float32")
+        spec["data"]["prompt_limit"] = 8
+        spec["generation"].update(
+            max_input_tokens=8,
+            max_new_tokens=12,
+            candidate_count=2,
+            branch_after_reasoning_tokens=2,
+            rollout_tokens=2,
+            delay_tokens=2,
+            alternative_selection="probe_preference",
+            probe={
+                "tokens": 3,
+                "history_tokens": 8,
+                "judge_input_cap": 32,
+                "judge_reasoning_tokens": 8,
+                "min_margin": 0.15,
+            },
+        )
+        validate_spec(spec)
+        results = []
+        judge = SimpleNamespace(compare=lambda *args: {"accepted": True, "seconds": 0.0})
+        for task, answer_format, gold in (("gsm8k", "math", "2"), ("gpqa", "choice", "B")):
+            backend = TransformersBackend(
+                {"device": "cpu", "threads": 1, "max_context_tokens": 64},
+                model=TinyCausalModel(),
+                tokenizer=TinyTokenizer(),
+            )
+            row = {
+                "id": task,
+                "task": task,
+                "question": "Q",
+                "answer_format": answer_format,
+                "gold": gold,
+                "choices": ["A", "B", "C", "D"],
+            }
+            with patch("dirty_swapping.preference.ProbePreferenceJudge", return_value=judge):
+                result = run_case(backend, row, spec, "swap")
+            self.assertTrue(result["swap"]["swapped"])
+            results.append(result)
+        self.assertEqual(results[0]["generated_text"], results[1]["generated_text"])
+        self.assertEqual(results[0]["swap"]["reason"], results[1]["swap"]["reason"])
+
     def test_guided_swap_changes_only_old_span_and_logs_actual_token(self):
         backend = TransformersBackend(
             {"device": "cpu", "threads": 1, "max_context_tokens": 32},

@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 
 from .backend import PromptLimitError
-from .math_scoring import boxed_answer
 
 
 def draft_model_config(spec: dict) -> dict:
@@ -32,7 +31,7 @@ def download_draft_model(spec: dict) -> None:
 
 
 def generate_draft(drafter, main, question: str, config: dict, span_cap: int) -> dict:
-    """Consume only the question; a syntactically valid box does not imply correctness."""
+    """Consume only the question; completion and span checks are independent of answer type."""
     drafter.synchronize()
     started = time.monotonic()
     result = {"prefix": None, "reason": "draft_incomplete"}
@@ -46,14 +45,12 @@ def generate_draft(drafter, main, question: str, config: dict, span_cap: int) ->
     else:
         drafter.advance(state, config["max_new_tokens"])
         text = drafter.tokenizer.decode(state.ids[state.prompt_length :], skip_special_tokens=True)
-        answer = boxed_answer(text)
         result.update(
             text=text,
             generated_tokens=len(state.ids) - state.prompt_length,
             prompt_tokens=state.prompt_length,
-            answer=answer,
         )
-        if drafter.finished(state) and answer is not None:
+        if drafter.finished(state) and text.strip():
             lines = text.strip().splitlines()
             while lines:
                 prefix = "\n" + "\n".join(lines)
@@ -63,7 +60,7 @@ def generate_draft(drafter, main, question: str, config: dict, span_cap: int) ->
                 lines.pop(0)
             else:
                 prefix, tokens = "", []
-            if not tokens or boxed_answer(prefix) != answer:
+            if not tokens:
                 result["reason"] = "draft_span_limit"
             elif any(token in main.eos_ids or token == main.think_end_id for token in tokens):
                 result["reason"] = "draft_special_token"
@@ -74,6 +71,8 @@ def generate_draft(drafter, main, question: str, config: dict, span_cap: int) ->
                     truncated=prefix.strip() != text.strip(),
                     reason="draft_ready",
                 )
+        elif drafter.finished(state):
+            result["reason"] = "draft_empty"
     drafter.synchronize()
     result["seconds"] = time.monotonic() - started
     return result

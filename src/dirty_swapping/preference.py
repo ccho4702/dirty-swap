@@ -1,4 +1,4 @@
-"""Frozen, order-checked self-judgment for math continuation probes.
+"""Frozen, order-checked self-judgment for QA continuation probes.
 
 Conditional A/B/T probabilities are a preference heuristic, not calibrated
 correctness probabilities. The scorer never receives a reference answer.
@@ -37,9 +37,12 @@ class ProbePreferenceJudge:
 
     def _score(self, question: str, history: str, left: str, right: str) -> dict:
         backend, torch = self.backend, self.backend.torch
-        prompt = f"""Compare these two next math steps. Check the calculations in A and B first;
-do not restate the problem. Earlier reasoning may be wrong. Prefer mathematical
-validity and progress, not agreement or style. Decide A, B, or T for a tie.
+        prompt = f"""Compare two continuations toward answering the same question.
+Check their claims and reasoning against the question, supplied context and evidence.
+Prefer factual consistency, valid reasoning and useful progress toward the answer.
+Do not restate the question. Earlier reasoning may be wrong. Do not prefer agreement,
+verbosity or style. If neither is clearly better, decide T. Otherwise decide A or B.
+These decision labels identify continuations, not answer-option labels in the question.
 
 Problem: {question}
 Earlier reasoning: {history}
@@ -52,7 +55,7 @@ Option B: {right}
             add_generation_prompt=True,
             enable_thinking=True,
         )
-        ids += backend.tokenizer.encode("Check A's computation:", add_special_tokens=False)
+        ids += backend.tokenizer.encode("Check A's claims and reasoning:", add_special_tokens=False)
         if len(ids) > self.config["judge_input_cap"]:
             return {"valid": False, "reason": "judge_input_cap"}
         with torch.inference_mode():

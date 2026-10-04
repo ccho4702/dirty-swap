@@ -1,10 +1,12 @@
-# 실제 교체 상태의 probe 선택기 — changho 연구
+# 이전 probe·초안 탐색 기록 — changho 연구
 
 공식 `main`의 파일 상태는 연구 계획 push 이전 `b63bb2b`와 동일하게 복원했다. 이후 연구는 `changho`에서 진행하며, 아래 방법은 공식 baseline의 검증된 성능을 대체하는 결과가 아니다.
 
-## 방법
+이 문서는 수학 중심의 초기 탐색과 실패를 보존한다. 현재 데이터셋 구분 없는 구현·기준은 [일반 방법론](GENERAL_METHOD.ko.md)을 따른다. 아래 gate와 성능은 측정한 이전 revision의 기록이며 최신 공통 판단기 성능으로 섞지 않는다.
 
-현재 probe 선택기는 수학 QA만 지원한다. 같은 prefix에서 top-1과 top-2의 32토큰 rollout을 만들고 top-1으로 주 경로를 이어간다. reasoning 256토큰에서 분기한 뒤 rollout과 128토큰 지연이 끝나면, 현재 cache의 사본 두 개를 만든다. 하나는 no-swap, 다른 하나는 과거 32토큰 KV만 대안으로 교체한다. 기존 텍스트와 그 구간 뒤의 KV는 보존한다.
+## 이전 방법
+
+측정 당시 probe 선택기는 수학 QA만 지원했다. 같은 prefix에서 top-1과 top-2의 32토큰 rollout을 만들고 top-1으로 주 경로를 이어간다. reasoning 256토큰에서 분기한 뒤 rollout과 128토큰 지연이 끝나면, 현재 cache의 사본 두 개를 만든다. 하나는 no-swap, 다른 하나는 과거 32토큰 KV만 대안으로 교체한다. 기존 텍스트와 그 구간 뒤의 KV는 보존한다.
 
 두 trial에서 새 미래 64토큰을 생성한다. 첫 미래 토큰은 기존 logits를 사용하므로, 실제 교체 효과는 그 뒤 토큰에서 나타날 수 있다. 미래 토큰열이 같으면 교체를 거부하고 judge를 실행하지 않는다. 다르면 질문, 기존 reasoning의 마지막 256토큰, 두 미래 텍스트만 같은 frozen 모델의 judge에 준다. gold answer는 전달하지 않는다.
 
@@ -92,3 +94,25 @@ uv run --frozen dirty-swapping setup --datasets gsm8k --config configs/draft-swa
 uv run --frozen dirty-swapping run --datasets gsm8k --split development \
   --config configs/draft-swap-dev4.json --run-name draft-dev4
 ```
+
+## 초안 KV의 실제 결과와 확인 cohort
+
+지연 16 개발: baseline 2/4 → swap 3/4, wins/losses 2/1, 평균 70.37→58.35초. 그러나 고정한 test 8개에서는 5/8→5/8, wins/losses 0/0, 평균 51.19→55.23초(+7.9%)였다. **개발 개선이 첫 독립 cohort에서 재현되지 않았다.** 둘을 합쳐 하나의 성능 개선 점수로 보고하지 않는다.
+
+개발에서 생긴 1202의 실패를 근거로 지연만 1토큰으로 줄인 후보도 검사했다. 개발은 2/4→3/4, wins/losses 2/1, 평균 66.39→55.19초였고 해당 실패가 남았다. 처음 test 8개와 겹치지 않는 별도 cohort를 결과를 보기 전에 고정했다: 782, 600, 6, 1304, 1011, 459, 1306, 640. 동일하게 남은 seed 순서 첫 4개 + 입력 길이 상위 4개이며 label·baseline 성공 여부를 선택에 쓰지 않았다. `configs/draft-swap-delay1-heldout8.json`이 정확한 ID를 보존한다.
+
+```bash
+uv run --frozen dirty-swapping run --datasets gsm8k --split evaluation \
+  --config configs/draft-swap-delay1-heldout8.json --run-name draft-delay1-test8
+uv run --frozen python scripts/verify_draft_cache.py \
+  --config configs/draft-swap-delay1-dev4.json --run-name draft-cache-check
+# verification 재개: --resume outputs/draft-cache-check
+```
+
+KV verification은 gold를 제거한 개발 문항을 사용한다. 모든 실제 attention layer의 prefix·suffix K/V와 기존 token ID가 보존되고 span이 변경됐는지 확인한다. 추가 미래 생성 뒤에도 기존 suffix가 그대로인지, 첫 미래 token이 기존 logits를 쓰는지, baseline이 실제 branch를 거친 구간까지 `model.generate`와 일치하는지 검사한다. 이것은 QA score가 아니라 실행 의미의 통합 검사다.
+
+## 최종 확인
+
+지연 1의 새 test 8개는 6/8→6/8, wins/losses 1/1, 시간 55.35→54.55초였다. 개발의 개선이 독립 cohort의 전체 정답 수 향상으로 이어지지 않았다. 1202의 4,096토큰 검사는 양쪽 정답이었고 교체는 2,078토큰으로 완료했다. GPU 36개 layer의 prefix/suffix·기존 ID 보존, 추가 미래 생성 후 suffix 보존, native generate 일치와 frozen 상태를 확인했다.
+
+기존 판단기로 개발 초안 4개를 검사했지만 원하는 선택은 2/4였다. 잘못된 초안 1개를 거부했고 올바른 초안 3개 중 1개만 채택했다. 따라서 이 필터도 확대하지 않는다. [결과 요약](RESULTS.ko.md)과 [공개 metrics](../outputs/research-summary-20261004/summary.json)가 완료된 범위를 기록한다.

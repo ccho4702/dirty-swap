@@ -56,17 +56,23 @@ class DraftTests(unittest.TestCase):
         self.assertEqual(result["rollout_tokens"], len(result["prefix"]))
         self.assertEqual(drafter.prompts, ["Solve briefly.\n\nProblem:\nQ"])
 
-    def test_missing_incomplete_and_oversized_answer_reject(self):
+    def test_unfinished_empty_and_oversized_drafts_reject(self):
         for body, ended, cap, reason in (
             ("\\boxed{2}", False, 32, "draft_incomplete"),
-            ("\\boxed{", True, 32, "draft_incomplete"),
-            ("no box", True, 32, "draft_incomplete"),
+            ("", True, 32, "draft_empty"),
             ("\\boxed{123456789}", True, 4, "draft_span_limit"),
         ):
             with self.subTest(body=body, ended=ended):
                 result = generate_draft(DraftBackend(body, ended), self.main, "Q", self.config, cap)
                 self.assertIsNone(result["prefix"])
                 self.assertEqual(result["reason"], reason)
+
+    def test_draft_acceptance_does_not_require_math_answer_format(self):
+        for body in ("Final answer: B", "The capital is Paris.", "Yes.", "2"):
+            with self.subTest(body=body):
+                result = generate_draft(DraftBackend(body), self.main, "Q", self.config, 64)
+                self.assertEqual(result["reason"], "draft_ready")
+                self.assertEqual(result["prefix"], "\n" + body)
 
     def test_input_limit_and_special_tokens_fail_closed(self):
         config = {**self.config, "max_input_tokens": 1}

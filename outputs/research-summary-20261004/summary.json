@@ -1,0 +1,921 @@
+{
+  "at": "2026-10-04T05:17:33.226620+00:00",
+  "branch": "changho",
+  "dataset_independent_update": {
+    "completed_arm_cases": 14,
+    "completed_paired_examples": 7,
+    "config": "configs/general-probe-smoke.json",
+    "controlled_qa_judge_gate": {
+      "at": "2026-10-04T06:00:01.889091+00:00",
+      "groups": {
+        "correct": {
+          "n": 4,
+          "passed": 4
+        },
+        "harm": {
+          "n": 4,
+          "passed": 4
+        },
+        "tie": {
+          "n": 4,
+          "passed": 4
+        }
+      },
+      "judge_seconds": 124.16295292647555,
+      "passed": true
+    },
+    "cpu_tests_passed": 47,
+    "dataset_or_answer_type_policy_gates": false,
+    "datasets": [
+      "aime25",
+      "gpqa",
+      "gsm8k",
+      "hmmt25",
+      "longbench_v2",
+      "math500",
+      "supergpqa"
+    ],
+    "execution_only": true,
+    "learned_general_qa_value_function_implemented": false,
+    "math_answer_format_required_for_drafts": false,
+    "max_new_tokens": 128,
+    "performance_gain_claim": false,
+    "same_method_and_criterion": true,
+    "source_manifest_sha256": "d78a11574ab31ebbff06668a01abaddbc4daecac1638ab492050d50b9849c983",
+    "swap_reasons": {
+      "aime25": {
+        "probe_rejected": 1
+      },
+      "gpqa": {
+        "identical_probes": 1
+      },
+      "gsm8k": {
+        "probe_rejected": 1
+      },
+      "hmmt25": {
+        "identical_probes": 1
+      },
+      "longbench_v2": {
+        "identical_probes": 1
+      },
+      "math500": {
+        "identical_probes": 1
+      },
+      "supergpqa": {
+        "identical_probes": 1
+      }
+    }
+  },
+  "experiments": [
+    {
+      "cases": [
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 79.86474533658475,
+          "draft_correct": true,
+          "draft_seconds": 3.3950618361122906,
+          "id": "gsm8k-train-1292",
+          "rollout_tokens": 87,
+          "swap_correct": true,
+          "swap_generated_tokens": 1232,
+          "swap_latency_s": 54.23881925502792,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 722,
+          "baseline_latency_s": 28.053631860762835,
+          "draft_correct": true,
+          "draft_seconds": 2.558300733100623,
+          "id": "gsm8k-train-3522",
+          "rollout_tokens": 65,
+          "swap_correct": true,
+          "swap_generated_tokens": 578,
+          "swap_latency_s": 27.48865298414603,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 95.2409762297757,
+          "draft_correct": true,
+          "draft_seconds": 5.241730258800089,
+          "id": "gsm8k-train-3331",
+          "rollout_tokens": 91,
+          "swap_correct": true,
+          "swap_generated_tokens": 1370,
+          "swap_latency_s": 61.987394981086254,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 2009,
+          "baseline_latency_s": 78.33970561437309,
+          "draft_correct": false,
+          "draft_seconds": 7.307622953783721,
+          "id": "gsm8k-train-1202",
+          "rollout_tokens": 81,
+          "swap_correct": false,
+          "swap_generated_tokens": 2048,
+          "swap_latency_s": 89.69546442432329,
+          "swap_reason": "draft_swapped"
+        }
+      ],
+      "config": "configs/draft-swap-dev4.json",
+      "delay_tokens": 16,
+      "draft_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Instruct-2507",
+        "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+      },
+      "draft_only_posthoc": {
+        "answered": 4,
+        "correct": 3,
+        "mean_phase_seconds": 4.625678945449181,
+        "n": 4,
+        "note": "Accuracy is scored after main generation from saved drafts. Phase time includes text processing and is not a separate standalone runtime benchmark."
+      },
+      "latency_change_percent": -17.08308637359388,
+      "main_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Thinking-2507",
+        "revision": "768f209d9ea81521153ed38c47d515654e938aea"
+      },
+      "max_new_tokens": 2048,
+      "paired_metrics": {
+        "arms": {
+          "baseline": {
+            "accuracy": 0.5,
+            "answer_extracted": 2,
+            "correct": 2,
+            "eos_ended": 2,
+            "max_peak_cuda_memory_mib": 15787.4443359375,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 70.37476476037409,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 79.10222547547892,
+            "p95_latency_s": 95.2409762297757,
+            "sum_latency_s": 281.49905904149637,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 4
+            },
+            "thinking_complete": 4
+          },
+          "swap": {
+            "accuracy": 0.75,
+            "answer_extracted": 3,
+            "correct": 3,
+            "eos_ended": 3,
+            "max_peak_cuda_memory_mib": 15784.8779296875,
+            "mean_alternative_rollout_s": 3.127788402605802,
+            "mean_draft_s": 4.625678945449181,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 58.35258291114587,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0018984429771080613,
+            "median_latency_s": 58.11310711805709,
+            "p95_latency_s": 89.69546442432329,
+            "sum_latency_s": 233.4103316445835,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 4
+            },
+            "thinking_complete": 3
+          }
+        },
+        "delta_accuracy_pp": 25.0,
+        "losses": 1,
+        "n": 4,
+        "wins": 2
+      },
+      "run": "draft-swap-dev4-20261004",
+      "runtime": {
+        "cuda_runtime": "12.4",
+        "gpu_driver_versions": [
+          "565.57.01"
+        ],
+        "packages": {
+          "huggingface-hub": "0.36.2",
+          "math-verify": "0.9.0",
+          "pyarrow": "23.0.1",
+          "torch": "2.6.0",
+          "transformers": "4.57.1"
+        },
+        "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+        "python": "3.12.4",
+        "visible_gpus": [
+          "NVIDIA GeForce RTX 3090"
+        ]
+      },
+      "source_manifest_sha256": "3b45a9099d16d237208cd1727bb664ec08b23cd083339b1760a1db9b51f7c4bf",
+      "split": "development"
+    },
+    {
+      "cases": [
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 799,
+          "baseline_latency_s": 31.057566446252167,
+          "draft_correct": true,
+          "draft_seconds": 3.2850163779221475,
+          "id": "gsm8k-test-1259",
+          "rollout_tokens": 84,
+          "swap_correct": true,
+          "swap_generated_tokens": 713,
+          "swap_latency_s": 34.189306686166674,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 1573,
+          "baseline_latency_s": 61.15178054384887,
+          "draft_correct": true,
+          "draft_seconds": 5.770535544026643,
+          "id": "gsm8k-test-1038",
+          "rollout_tokens": 96,
+          "swap_correct": true,
+          "swap_generated_tokens": 1412,
+          "swap_latency_s": 64.48852290818468,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 594,
+          "baseline_latency_s": 23.06191486073658,
+          "draft_correct": true,
+          "draft_seconds": 1.8933204882778227,
+          "id": "gsm8k-test-524",
+          "rollout_tokens": 48,
+          "swap_correct": true,
+          "swap_generated_tokens": 526,
+          "swap_latency_s": 24.194044440053403,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 628,
+          "baseline_latency_s": 24.347511359956115,
+          "draft_correct": true,
+          "draft_seconds": 1.1577500430867076,
+          "id": "gsm8k-test-379",
+          "rollout_tokens": 29,
+          "swap_correct": true,
+          "swap_generated_tokens": 490,
+          "swap_latency_s": 21.322360837832093,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 79.51281910808757,
+          "draft_correct": false,
+          "draft_seconds": 5.87779168272391,
+          "id": "gsm8k-test-1077",
+          "rollout_tokens": 89,
+          "swap_correct": false,
+          "swap_generated_tokens": 2048,
+          "swap_latency_s": 88.42467872798443,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 816,
+          "baseline_latency_s": 31.555924584157765,
+          "draft_correct": true,
+          "draft_seconds": 3.2475004117004573,
+          "id": "gsm8k-test-1209",
+          "rollout_tokens": 83,
+          "swap_correct": true,
+          "swap_generated_tokens": 673,
+          "swap_latency_s": 32.61207195231691,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 79.81146763265133,
+          "draft_correct": false,
+          "draft_seconds": 4.020080883055925,
+          "id": "gsm8k-test-1199",
+          "rollout_tokens": 94,
+          "swap_correct": false,
+          "swap_generated_tokens": 2048,
+          "swap_latency_s": 87.65848248172551,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 78.99283067695796,
+          "draft_correct": false,
+          "draft_seconds": 6.403454804793,
+          "id": "gsm8k-test-1176",
+          "rollout_tokens": 82,
+          "swap_correct": false,
+          "swap_generated_tokens": 2048,
+          "swap_latency_s": 88.97461145464331,
+          "swap_reason": "draft_swapped"
+        }
+      ],
+      "config": "configs/draft-swap-heldout8.json",
+      "delay_tokens": 16,
+      "draft_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Instruct-2507",
+        "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+      },
+      "draft_only_posthoc": {
+        "answered": 8,
+        "correct": 5,
+        "mean_phase_seconds": 3.9569312794483267,
+        "n": 8,
+        "note": "Accuracy is scored after main generation from saved drafts. Phase time includes text processing and is not a separate standalone runtime benchmark."
+      },
+      "latency_change_percent": 7.905472850403084,
+      "main_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Thinking-2507",
+        "revision": "768f209d9ea81521153ed38c47d515654e938aea"
+      },
+      "max_new_tokens": 2048,
+      "paired_metrics": {
+        "arms": {
+          "baseline": {
+            "accuracy": 0.625,
+            "answer_extracted": 5,
+            "correct": 5,
+            "eos_ended": 5,
+            "max_peak_cuda_memory_mib": 15784.0224609375,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 51.186476901581045,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 46.35385256400332,
+            "p95_latency_s": 79.81146763265133,
+            "sum_latency_s": 409.49181521264836,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 8
+            },
+            "thinking_complete": 6
+          },
+          "swap": {
+            "accuracy": 0.625,
+            "answer_extracted": 5,
+            "correct": 5,
+            "eos_ended": 5,
+            "max_peak_cuda_memory_mib": 15784.0224609375,
+            "mean_alternative_rollout_s": 2.940464295563288,
+            "mean_draft_s": 3.9569312794483267,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 55.233009936113376,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.001564044679980725,
+            "median_latency_s": 49.338914797175676,
+            "p95_latency_s": 88.97461145464331,
+            "sum_latency_s": 441.864079488907,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 8
+            },
+            "thinking_complete": 5
+          }
+        },
+        "delta_accuracy_pp": 0.0,
+        "losses": 0,
+        "n": 8,
+        "wins": 0
+      },
+      "run": "draft-swap-heldout8-20261004",
+      "runtime": {
+        "cuda_runtime": "12.4",
+        "gpu_driver_versions": [
+          "565.57.01"
+        ],
+        "packages": {
+          "huggingface-hub": "0.36.2",
+          "math-verify": "0.9.0",
+          "pyarrow": "23.0.1",
+          "torch": "2.6.0",
+          "transformers": "4.57.1"
+        },
+        "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+        "python": "3.12.4",
+        "visible_gpus": [
+          "NVIDIA GeForce RTX 3090"
+        ]
+      },
+      "source_manifest_sha256": "3b45a9099d16d237208cd1727bb664ec08b23cd083339b1760a1db9b51f7c4bf",
+      "split": "evaluation"
+    },
+    {
+      "cases": [
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 80.94802018394694,
+          "draft_correct": true,
+          "draft_seconds": 3.44675334636122,
+          "id": "gsm8k-train-1292",
+          "rollout_tokens": 87,
+          "swap_correct": true,
+          "swap_generated_tokens": 1038,
+          "swap_latency_s": 47.343910682946444,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 722,
+          "baseline_latency_s": 28.094199403654784,
+          "draft_correct": true,
+          "draft_seconds": 2.56349391117692,
+          "id": "gsm8k-train-3522",
+          "rollout_tokens": 65,
+          "swap_correct": true,
+          "swap_generated_tokens": 467,
+          "swap_latency_s": 23.273882586043328,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 79.3468485684134,
+          "draft_correct": true,
+          "draft_seconds": 5.305825909599662,
+          "id": "gsm8k-train-3331",
+          "rollout_tokens": 91,
+          "swap_correct": true,
+          "swap_generated_tokens": 1030,
+          "swap_latency_s": 48.53935195878148,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 2009,
+          "baseline_latency_s": 77.1848439197056,
+          "draft_correct": false,
+          "draft_seconds": 6.952601433265954,
+          "id": "gsm8k-train-1202",
+          "rollout_tokens": 81,
+          "swap_correct": false,
+          "swap_generated_tokens": 2048,
+          "swap_latency_s": 101.61321559920907,
+          "swap_reason": "draft_swapped"
+        }
+      ],
+      "config": "configs/draft-swap-delay1-dev4.json",
+      "delay_tokens": 1,
+      "draft_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Instruct-2507",
+        "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+      },
+      "draft_only_posthoc": {
+        "answered": 4,
+        "correct": 3,
+        "mean_phase_seconds": 4.567168650100939,
+        "n": 4,
+        "note": "Accuracy is scored after main generation from saved drafts. Phase time includes text processing and is not a separate standalone runtime benchmark."
+      },
+      "latency_change_percent": -16.87046400700908,
+      "main_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Thinking-2507",
+        "revision": "768f209d9ea81521153ed38c47d515654e938aea"
+      },
+      "max_new_tokens": 2048,
+      "paired_metrics": {
+        "arms": {
+          "baseline": {
+            "accuracy": 0.5,
+            "answer_extracted": 2,
+            "correct": 2,
+            "eos_ended": 2,
+            "max_peak_cuda_memory_mib": 15787.4443359375,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 66.39347801893018,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 78.2658462440595,
+            "p95_latency_s": 80.94802018394694,
+            "sum_latency_s": 265.5739120757207,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 4
+            },
+            "thinking_complete": 4
+          },
+          "swap": {
+            "accuracy": 0.75,
+            "answer_extracted": 3,
+            "correct": 3,
+            "eos_ended": 3,
+            "max_peak_cuda_memory_mib": 15784.8779296875,
+            "mean_alternative_rollout_s": 3.1418125707423314,
+            "mean_draft_s": 4.567168650100939,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 55.19259020674508,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0016661653062328696,
+            "median_latency_s": 47.94163132086396,
+            "p95_latency_s": 101.61321559920907,
+            "sum_latency_s": 220.77036082698032,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 4
+            },
+            "thinking_complete": 4
+          }
+        },
+        "delta_accuracy_pp": 25.0,
+        "losses": 1,
+        "n": 4,
+        "wins": 2
+      },
+      "run": "draft-swap-delay1-dev4-20261004",
+      "runtime": {
+        "cuda_runtime": "12.4",
+        "gpu_driver_versions": [
+          "565.57.01"
+        ],
+        "packages": {
+          "huggingface-hub": "0.36.2",
+          "math-verify": "0.9.0",
+          "pyarrow": "23.0.1",
+          "torch": "2.6.0",
+          "transformers": "4.57.1"
+        },
+        "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+        "python": "3.12.4",
+        "visible_gpus": [
+          "NVIDIA GeForce RTX 3090"
+        ]
+      },
+      "source_manifest_sha256": "3b45a9099d16d237208cd1727bb664ec08b23cd083339b1760a1db9b51f7c4bf",
+      "split": "development"
+    },
+    {
+      "cases": [
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 81.23137225210667,
+          "draft_correct": false,
+          "draft_seconds": 2.4012426678091288,
+          "id": "gsm8k-test-782",
+          "rollout_tokens": 60,
+          "swap_correct": false,
+          "swap_generated_tokens": 2000,
+          "swap_latency_s": 83.19645850313827,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 804,
+          "baseline_latency_s": 31.58152311015874,
+          "draft_correct": true,
+          "draft_seconds": 1.14242335408926,
+          "id": "gsm8k-test-600",
+          "rollout_tokens": 28,
+          "swap_correct": true,
+          "swap_generated_tokens": 344,
+          "swap_latency_s": 15.722260000184178,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 939,
+          "baseline_latency_s": 36.243735378142446,
+          "draft_correct": true,
+          "draft_seconds": 2.4544585230760276,
+          "id": "gsm8k-test-6",
+          "rollout_tokens": 63,
+          "swap_correct": true,
+          "swap_generated_tokens": 494,
+          "swap_latency_s": 23.958274260163307,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 627,
+          "baseline_latency_s": 24.18408371275291,
+          "draft_correct": true,
+          "draft_seconds": 2.3374561406672,
+          "id": "gsm8k-test-1304",
+          "rollout_tokens": 59,
+          "swap_correct": true,
+          "swap_generated_tokens": 494,
+          "swap_latency_s": 23.905383525881916,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 1842,
+          "baseline_latency_s": 71.42678352026269,
+          "draft_correct": true,
+          "draft_seconds": 8.530646414961666,
+          "id": "gsm8k-test-1011",
+          "rollout_tokens": 77,
+          "swap_correct": true,
+          "swap_generated_tokens": 1606,
+          "swap_latency_s": 73.98012587986887,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 1512,
+          "baseline_latency_s": 58.92886627698317,
+          "draft_correct": false,
+          "draft_seconds": 4.738329156767577,
+          "id": "gsm8k-test-459",
+          "rollout_tokens": 87,
+          "swap_correct": true,
+          "swap_generated_tokens": 1656,
+          "swap_latency_s": 72.70628098817542,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 1365,
+          "baseline_latency_s": 53.41088473284617,
+          "draft_correct": false,
+          "draft_seconds": 4.596555284690112,
+          "id": "gsm8k-test-1306",
+          "rollout_tokens": 94,
+          "swap_correct": false,
+          "swap_generated_tokens": 2048,
+          "swap_latency_s": 88.69050461193547,
+          "swap_reason": "draft_swapped"
+        },
+        {
+          "baseline_correct": false,
+          "baseline_generated_tokens": 2048,
+          "baseline_latency_s": 85.76652445876971,
+          "draft_correct": true,
+          "draft_seconds": 5.25135882338509,
+          "id": "gsm8k-test-640",
+          "rollout_tokens": 91,
+          "swap_correct": true,
+          "swap_generated_tokens": 1175,
+          "swap_latency_s": 54.26982589205727,
+          "swap_reason": "draft_swapped"
+        }
+      ],
+      "config": "configs/draft-swap-delay1-heldout8.json",
+      "delay_tokens": 1,
+      "draft_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Instruct-2507",
+        "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+      },
+      "draft_only_posthoc": {
+        "answered": 8,
+        "correct": 5,
+        "mean_phase_seconds": 3.9315587956807576,
+        "n": 8,
+        "note": "Accuracy is scored after main generation from saved drafts. Phase time includes text processing and is not a separate standalone runtime benchmark."
+      },
+      "latency_change_percent": -1.432934866782165,
+      "main_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Thinking-2507",
+        "revision": "768f209d9ea81521153ed38c47d515654e938aea"
+      },
+      "max_new_tokens": 2048,
+      "paired_metrics": {
+        "arms": {
+          "baseline": {
+            "accuracy": 0.75,
+            "answer_extracted": 6,
+            "correct": 6,
+            "eos_ended": 6,
+            "max_peak_cuda_memory_mib": 15776.4658203125,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 55.34672168025281,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 56.16987550491467,
+            "p95_latency_s": 85.76652445876971,
+            "sum_latency_s": 442.7737734420225,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 8
+            },
+            "thinking_complete": 6
+          },
+          "swap": {
+            "accuracy": 0.75,
+            "answer_extracted": 7,
+            "correct": 6,
+            "eos_ended": 7,
+            "max_peak_cuda_memory_mib": 15776.8935546875,
+            "mean_alternative_rollout_s": 2.729960505559575,
+            "mean_draft_s": 3.9315587956807576,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 54.55363920767559,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0015208259574137628,
+            "median_latency_s": 63.488053440116346,
+            "p95_latency_s": 88.69050461193547,
+            "sum_latency_s": 436.4291136614047,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 8
+            },
+            "thinking_complete": 7
+          }
+        },
+        "delta_accuracy_pp": 0.0,
+        "losses": 1,
+        "n": 8,
+        "wins": 1
+      },
+      "run": "draft-swap-delay1-heldout8-20261004",
+      "runtime": {
+        "cuda_runtime": "12.4",
+        "gpu_driver_versions": [
+          "565.57.01"
+        ],
+        "packages": {
+          "huggingface-hub": "0.36.2",
+          "math-verify": "0.9.0",
+          "pyarrow": "23.0.1",
+          "torch": "2.6.0",
+          "transformers": "4.57.1"
+        },
+        "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+        "python": "3.12.4",
+        "visible_gpus": [
+          "NVIDIA GeForce RTX 3090"
+        ]
+      },
+      "source_manifest_sha256": "3b45a9099d16d237208cd1727bb664ec08b23cd083339b1760a1db9b51f7c4bf",
+      "split": "evaluation"
+    },
+    {
+      "cases": [
+        {
+          "baseline_correct": true,
+          "baseline_generated_tokens": 2009,
+          "baseline_latency_s": 78.83065598271787,
+          "draft_correct": false,
+          "draft_seconds": 7.129371271003038,
+          "id": "gsm8k-train-1202",
+          "rollout_tokens": 81,
+          "swap_correct": true,
+          "swap_generated_tokens": 2078,
+          "swap_latency_s": 91.70485345833004,
+          "swap_reason": "draft_swapped"
+        }
+      ],
+      "config": "configs/draft-swap-budget-check.json",
+      "delay_tokens": 1,
+      "draft_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Instruct-2507",
+        "revision": "cdbee75f17c01a7cc42f958dc650907174af0554"
+      },
+      "draft_only_posthoc": {
+        "answered": 1,
+        "correct": 0,
+        "mean_phase_seconds": 7.129371271003038,
+        "n": 1,
+        "note": "Accuracy is scored after main generation from saved drafts. Phase time includes text processing and is not a separate standalone runtime benchmark."
+      },
+      "latency_change_percent": 16.331460540471188,
+      "main_model": {
+        "device": "cuda:0",
+        "dtype": "bfloat16",
+        "name": "Qwen/Qwen3-4B-Thinking-2507",
+        "revision": "768f209d9ea81521153ed38c47d515654e938aea"
+      },
+      "max_new_tokens": 4096,
+      "paired_metrics": {
+        "arms": {
+          "baseline": {
+            "accuracy": 1.0,
+            "answer_extracted": 1,
+            "correct": 1,
+            "eos_ended": 1,
+            "max_peak_cuda_memory_mib": 15779.3173828125,
+            "mean_alternative_rollout_s": 0.0,
+            "mean_draft_s": 0.0,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 78.83065598271787,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.0,
+            "median_latency_s": 78.83065598271787,
+            "p95_latency_s": 78.83065598271787,
+            "sum_latency_s": 78.83065598271787,
+            "swap_rate": 0.0,
+            "swap_reasons": {
+              "baseline": 1
+            },
+            "thinking_complete": 1
+          },
+          "swap": {
+            "accuracy": 1.0,
+            "answer_extracted": 1,
+            "correct": 1,
+            "eos_ended": 1,
+            "max_peak_cuda_memory_mib": 15789.1552734375,
+            "mean_alternative_rollout_s": 3.172847642097622,
+            "mean_draft_s": 7.129371271003038,
+            "mean_judge_s": 0.0,
+            "mean_latency_s": 91.70485345833004,
+            "mean_probe_s": 0.0,
+            "mean_swap_copy_s": 0.003372419159859419,
+            "median_latency_s": 91.70485345833004,
+            "p95_latency_s": 91.70485345833004,
+            "sum_latency_s": 91.70485345833004,
+            "swap_rate": 1.0,
+            "swap_reasons": {
+              "draft_swapped": 1
+            },
+            "thinking_complete": 1
+          }
+        },
+        "delta_accuracy_pp": 0.0,
+        "losses": 0,
+        "n": 1,
+        "wins": 0
+      },
+      "run": "draft-swap-delay1-budget-check-20261004",
+      "runtime": {
+        "cuda_runtime": "12.4",
+        "gpu_driver_versions": [
+          "565.57.01"
+        ],
+        "packages": {
+          "huggingface-hub": "0.36.2",
+          "math-verify": "0.9.0",
+          "pyarrow": "23.0.1",
+          "torch": "2.6.0",
+          "transformers": "4.57.1"
+        },
+        "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.31",
+        "python": "3.12.4",
+        "visible_gpus": [
+          "NVIDIA GeForce RTX 3090"
+        ]
+      },
+      "source_manifest_sha256": "3b45a9099d16d237208cd1727bb664ec08b23cd083339b1760a1db9b51f7c4bf",
+      "split": "development"
+    }
+  ],
+  "gpu_cache_verification": {
+    "all_layer_spans_changed": true,
+    "at": "2026-10-04T04:42:12.904202+00:00",
+    "delay_tokens": 1,
+    "device": "cuda:0",
+    "existing_ids_preserved": true,
+    "id": "gsm8k-train-1292",
+    "layers": 36,
+    "models_frozen": true,
+    "native_generate_matches_baseline": true,
+    "passed": true,
+    "prefix_kv_preserved": true,
+    "rollout_tokens": 87,
+    "stale_first_future_token_preserved": true,
+    "suffix_kv_preserved": true
+  },
+  "judge_gate": {
+    "adopted": false,
+    "correct_decisions": 2,
+    "development_examples": 4,
+    "harmful_drafts_rejected": 1,
+    "harmful_drafts_total": 1,
+    "useful_correct_drafts_accepted": 1,
+    "useful_correct_drafts_total": 3
+  },
+  "limitations": [
+    "No overall accuracy gain established on either independent 8-question cohort.",
+    "Individual fixed-budget regressions remain.",
+    "No full seven-dataset or 32768-token quality claim.",
+    "Default paired draft runs keep both models resident; peak memory is not plain model-only memory.",
+    "Single measured pass and targeted small cohorts do not establish statistical significance."
+  ],
+  "lock_sha256": "29baa7ab5b90d38fd668456502608cbcd67d3f16790460a6c141a5740d45d732",
+  "measured_package_revision": "9f65ce8",
+  "scope": "Small fixed-budget GSM8K development and disjoint evaluation cohorts; not full-suite results."
+}
