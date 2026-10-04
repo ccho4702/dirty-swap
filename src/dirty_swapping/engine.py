@@ -17,6 +17,7 @@ class GenerationAdapter(Protocol):
     def sequence_length(self, state: Any) -> int: ...
     def top_tokens(self, state: Any, count: int) -> list[int]: ...
     def rollout(self, state: Any, first_token: int, total_tokens: int) -> Any: ...
+    def guided_rollout(self, state: Any, prefix: str, total_tokens: int) -> Any: ...
     def advance(self, state: Any, token_count: int) -> Any: ...
     def cache(self, state: Any) -> Any: ...
     def reasoning_end(self, state: Any) -> int | None: ...
@@ -49,6 +50,7 @@ def intervene(
     probe_config: dict | None = None,
     question: str = "",
     judge=None,
+    alternative_prefix: str | None = None,
 ) -> InterventionResult:
     """Commit top-1 rollout, then optionally transplant top-2 KV after a delay.
 
@@ -58,8 +60,14 @@ def intervene(
     """
     if adapter.sequence_length(prefix_state) != plan.branch_position:
         raise ValueError("prefix length must equal absolute branch position")
-    if selection not in ("second_highest_first_token_probability", "probe_preference"):
+    if selection not in (
+        "second_highest_first_token_probability",
+        "probe_preference",
+        "guided_swap",
+    ):
         raise ValueError("unknown alternative selector")
+    if selection == "guided_swap" and (not alternative_prefix or plan.candidate_count != 2):
+        raise ValueError("guided swap requires one alternative and its prefix")
     if enabled and selection == "probe_preference" and (probe_config is None or judge is None):
         raise ValueError("probe selection requires configuration and a judge")
     expected = plan.candidate_count if enabled else 1
@@ -80,11 +88,18 @@ def intervene(
     short_alternative = False
     selected_alternative_left_reasoning = False
     alternative_rollout_s = 0.0
+    alternative_token = top[1] if enabled else None
     if enabled:
         adapter.synchronize()
         started = time.monotonic()
         for index, token in enumerate(top[1:expected], 1):
-            candidate = adapter.rollout(adapter.fork(prefix_state), token, plan.rollout_tokens)
+            if selection == "guided_swap":
+                candidate = adapter.guided_rollout(
+                    adapter.fork(prefix_state), alternative_prefix, plan.rollout_tokens
+                )
+                alternative_token = candidate.ids[plan.branch_position]
+            else:
+                candidate = adapter.rollout(adapter.fork(prefix_state), token, plan.rollout_tokens)
             if adapter.sequence_length(candidate) != adapter.sequence_length(main):
                 short_alternative = True
             if index == 1:
@@ -102,7 +117,7 @@ def intervene(
             False,
             "generation_ended_in_delay",
             top[0],
-            top[1] if enabled else None,
+            alternative_token,
             alternative_rollout_s,
             0.0,
             expected,
@@ -115,7 +130,7 @@ def intervene(
             False,
             "alternative_ended_early",
             top[0],
-            top[1],
+            alternative_token,
             alternative_rollout_s,
             0.0,
             expected,
@@ -126,7 +141,7 @@ def intervene(
             False,
             "alternative_left_reasoning",
             top[0],
-            top[1],
+            alternative_token,
             alternative_rollout_s,
             0.0,
             expected,
@@ -134,7 +149,14 @@ def intervene(
     reasoning_end = adapter.reasoning_end(main)
     if reasoning_end is not None and plan.swap_after_position >= reasoning_end:
         return InterventionResult(
-            main, False, "reasoning_ended", top[0], top[1], alternative_rollout_s, 0.0, expected
+            main,
+            False,
+            "reasoning_ended",
+            top[0],
+            alternative_token,
+            alternative_rollout_s,
+            0.0,
+            expected,
         )
 
     if selection == "probe_preference":
@@ -148,7 +170,7 @@ def intervene(
             chosen.swapped,
             chosen.reason,
             top[0],
-            top[1],
+            alternative_token,
             alternative_rollout_s,
             chosen.copy_seconds,
             expected,
@@ -166,9 +188,9 @@ def intervene(
     return InterventionResult(
         main,
         True,
-        "swapped",
+        "guided_swapped" if selection == "guided_swap" else "swapped",
         top[0],
-        top[1],
+        alternative_token,
         alternative_rollout_s,
         time.monotonic() - copy_started,
         expected,

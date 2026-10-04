@@ -6,7 +6,7 @@ import torch
 
 from dirty_swapping.backend import TransformersBackend
 from dirty_swapping.cache import swap_kv_segment
-from dirty_swapping.config import load_spec
+from dirty_swapping.config import load_spec, validate_spec
 from dirty_swapping.engine import intervene
 from dirty_swapping.protocol import SwapPlan
 from dirty_swapping.runner import run_case
@@ -47,6 +47,90 @@ class TinyCausalModel:
 
 
 class BackendTests(unittest.TestCase):
+    def test_guided_swap_changes_only_old_span_and_logs_actual_token(self):
+        backend = TransformersBackend(
+            {"device": "cpu", "threads": 1, "max_context_tokens": 32},
+            model=TinyCausalModel(),
+            tokenizer=TinyTokenizer(),
+        )
+        prefix = backend.prefill({"question": "Q", "answer_format": "math"})
+        plan = SwapPlan(3, 2, 2, 2)
+        baseline = intervene(backend, backend.fork(prefix), plan, enabled=False)
+        with patch.object(backend.tokenizer, "encode", return_value=[9]):
+            swapped = intervene(
+                backend,
+                backend.fork(prefix),
+                plan,
+                enabled=True,
+                selection="guided_swap",
+                alternative_prefix="Compute directly.",
+            )
+        self.assertTrue(swapped.swapped)
+        self.assertEqual(swapped.reason, "guided_swapped")
+        self.assertEqual(swapped.alternative_token, 9)
+        self.assertEqual(swapped.state.ids, baseline.state.ids)
+        layer = swapped.state.cache.layers[0]
+        self.assertEqual(layer.keys.flatten().tolist(), [1, 1, 1, 9, 7, 7, 7])
+        self.assertEqual(prefix.ids, [1, 1, 1])
+
+    def test_guided_prefix_validated_before_any_cache_mutation(self):
+        backend = TransformersBackend(
+            {"device": "cpu", "threads": 1, "max_context_tokens": 32},
+            model=TinyCausalModel(),
+            tokenizer=TinyTokenizer(),
+        )
+        prefix = backend.prefill({"question": "Q", "answer_format": "math"})
+        for tokens in ([], [8, 8, 8], [98], [99]):
+            with (
+                self.subTest(tokens=tokens),
+                patch.object(backend.tokenizer, "encode", return_value=tokens),
+            ):
+                with self.assertRaises(ValueError):
+                    backend.guided_rollout(prefix, "invalid", 2)
+                self.assertEqual(prefix.ids, [1, 1, 1])
+        for tail, expected in (("Step\n", True), ("Step\n\n", True), ("123", False)):
+            with patch.object(backend.tokenizer, "decode", return_value=tail):
+                self.assertEqual(backend.reasoning_step_boundary(prefix) is not None, expected)
+
+    def test_guided_configuration_requires_prefix_and_fitting_scan(self):
+        spec = load_spec()
+        spec["generation"].update(
+            alternative_selection="guided_swap",
+            alternative_prefix="Compute directly.",
+            candidate_count=2,
+            branch_policy="reasoning_step",
+            branch_scan_end=512,
+        )
+        validate_spec(spec)
+        spec["generation"]["alternative_prefix"] = " "
+        with self.assertRaisesRegex(ValueError, "nonempty"):
+            validate_spec(spec)
+        spec["generation"]["alternative_prefix"] = "Compute directly."
+        spec["generation"]["branch_scan_end"] = 40000
+        with self.assertRaisesRegex(ValueError, "schedule"):
+            validate_spec(spec)
+
+    def test_tied_logits_preserve_the_plain_greedy_main_token(self):
+        backend = TransformersBackend(
+            {"device": "cpu", "threads": 1, "max_context_tokens": 32},
+            model=TinyCausalModel(),
+            tokenizer=TinyTokenizer(),
+        )
+        prefix = backend.prefill({"question": "Q", "answer_format": "math"})
+        prefix.next_logits = torch.ones_like(prefix.next_logits)
+        self.assertEqual(backend.top_tokens(prefix, 2)[0], 0)
+        pure = backend.fork(prefix)
+        backend.advance(pure, 8)
+        baseline = intervene(
+            backend,
+            backend.fork(prefix),
+            SwapPlan(3, 2, 2, 2),
+            enabled=False,
+        )
+        backend.advance(baseline.state, 4)
+        self.assertEqual(baseline.main_token, 0)
+        self.assertEqual(baseline.state.ids, pure.ids)
+
     def test_numeric_trigger_uses_distinct_numeric_tokens_and_ratio(self):
         backend = TransformersBackend(
             {"device": "cpu", "threads": 1, "max_context_tokens": 32},

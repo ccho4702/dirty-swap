@@ -112,15 +112,18 @@ class TransformersBackend:
         return len(state.ids)
 
     def top_tokens(self, state: DecodeState, count: int) -> list[int]:
-        return [
-            int(token)
-            for token in self.torch.topk(state.next_logits.float(), count).indices.tolist()
-        ]
+        # topk can choose a different first token from argmax on tied logits.
+        # The main path must always use the same token as ordinary greedy decoding.
+        main = int(self.torch.argmax(state.next_logits).item())
+        if count == 1:
+            return [main]
+        ranked = self.torch.topk(state.next_logits.float(), count).indices.tolist()
+        return [main] + [int(token) for token in ranked if int(token) != main][: count - 1]
 
     def numeric_ambiguity(self, state: DecodeState, min_ratio: float) -> dict | None:
         """Find a concrete numeric top-1/top-2 fork without treating confidence as truth."""
-        values, indices = self.torch.topk(state.next_logits.float(), 2)
-        tokens = [int(token) for token in indices.tolist()]
+        tokens = self.top_tokens(state, 2)
+        values = state.next_logits.float()[tokens]
         texts = [
             self.tokenizer.decode([token], skip_special_tokens=False).strip() for token in tokens
         ]
@@ -154,6 +157,21 @@ class TransformersBackend:
         state.next_logits = output.logits[0, -1].detach()
         self.forward_steps += 1
         return state
+
+    def reasoning_step_boundary(self, state: DecodeState) -> dict | None:
+        tail = self.tokenizer.decode(state.ids[-16:], skip_special_tokens=False)
+        return {"policy": "reasoning_step"} if re.search(r"\n\s*$", tail) else None
+
+    def guided_rollout(self, state: DecodeState, prefix: str, total_tokens: int) -> DecodeState:
+        """Teacher-force a short alternative step, then finish the equal-length span."""
+        tokens = self.tokenizer.encode(prefix, add_special_tokens=False)
+        if not tokens or len(tokens) > total_tokens:
+            raise ValueError("alternative prefix must fit inside the replacement span")
+        if any(token in self.eos_ids or token == self.think_end_id for token in tokens):
+            raise ValueError("alternative prefix must stay inside reasoning")
+        for token in tokens:
+            self.step(state, token)
+        return self.advance(state, total_tokens - len(tokens))
 
     def advance(self, state: DecodeState, token_count: int) -> DecodeState:
         for _ in range(token_count):

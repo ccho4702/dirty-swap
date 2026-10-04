@@ -36,7 +36,7 @@ def validate_spec(spec: dict) -> dict:
         raise ValueError("unsupported protocol")
     model, gen, data = spec["model"], spec["generation"], spec["data"]
     policy = gen.get("branch_policy", "fixed")
-    if policy not in ("fixed", "numeric_ambiguity"):
+    if policy not in ("fixed", "numeric_ambiguity", "reasoning_step"):
         raise ValueError("unsupported branch policy")
     for name, value in (
         ("model.threads", model["threads"]),
@@ -62,8 +62,19 @@ def validate_spec(spec: dict) -> dict:
     if gen["alternative_selection"] not in (
         "second_highest_first_token_probability",
         "probe_preference",
+        "guided_swap",
     ):
         raise ValueError("unsupported alternative selector")
+    if gen["alternative_selection"] == "guided_swap":
+        if gen["candidate_count"] != 2:
+            raise ValueError("guided swap requires exactly one alternative")
+        if (
+            not isinstance(gen.get("alternative_prefix"), str)
+            or not gen["alternative_prefix"].strip()
+        ):
+            raise ValueError("guided swap requires a nonempty alternative_prefix")
+    elif "alternative_prefix" in gen:
+        raise ValueError("alternative_prefix requires guided_swap")
     probe_budget = 0
     if gen["alternative_selection"] == "probe_preference":
         if gen["candidate_count"] != 2:
@@ -87,10 +98,11 @@ def validate_spec(spec: dict) -> dict:
             raise ValueError("judge prompt and reasoning exceed model context")
         probe_budget = probe["tokens"]
     branch_last = gen["branch_after_reasoning_tokens"]
-    if policy == "numeric_ambiguity":
+    if policy in ("numeric_ambiguity", "reasoning_step"):
         branch_last = gen["branch_scan_end"]
         if type(branch_last) is not int or branch_last < gen["branch_after_reasoning_tokens"]:
             raise ValueError("branch_scan_end must be at least the first scan token")
+    if policy == "numeric_ambiguity":
         ratio = gen["min_top2_ratio"]
         if type(ratio) not in (int, float) or not math.isfinite(ratio) or not 0 < ratio <= 1:
             raise ValueError("min_top2_ratio must be between zero and one")

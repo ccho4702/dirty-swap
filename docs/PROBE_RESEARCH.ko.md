@@ -49,7 +49,24 @@ seed로 정해진 GSM8K train 첫 4문제에서 baseline과 선택기 모두 4/4
 
 `configs/probe-numeric-dev4.json`에는 결과를 보기 전에 고정한 개발 cohort ID가 있다: 기존 두 control `gsm8k-train-1292`, `gsm8k-train-3522`와 train 입력 길이 상위 두 문항 `gsm8k-train-3331`, `gsm8k-train-1202`다. 긴 문항은 gold나 baseline 성공 여부를 보고 선택하지 않았다. `execution.case_ids`는 지정된 split에 없는 ID를 거부하며, 이 부분 cohort가 완료돼도 full-suite primary score를 내지 않는다.
 
+숫자 분기 점검 중 동일한 logits에서 `topk`의 첫 토큰이 `argmax`와 다를 수 있는 재현 가능한 문제가 발견됐다. 연구 backend는 첫 후보를 항상 순정 `argmax`로 고정하고 나머지 후보만 top-k에서 고른다. tied-logit baseline parity 회귀 테스트를 추가했다. 수정 전 숫자 run은 결과가 저장되기 전에 중단하고 새 source identity로 다시 실행했다. 이 수정은 `changho`에만 있으며 공식 `main`에는 아직 반영하지 않았다. 중복 SIGINT/SIGTERM이 원자적 status cleanup을 다시 끊는 상황도 handler를 복원하는 context로 처리한다.
+
 ```bash
 uv run --frozen dirty-swapping run --datasets gsm8k --split development \
   --config configs/probe-numeric-dev4.json --run-name numeric-dev4
 ```
+
+## 숫자 분기의 결과와 다음 gate
+
+위 고정 개발 4문제, 4,096 출력 토큰에서 baseline과 numeric probe 모두 4/4였다. 실제 교체는 0회: judge 거부 2회, 숫자 분기 없음 1회, 동일한 미래 1회다. 평균 시간은 74.25초에서 81.86초로 10.3% 늘었다. 이 설정도 확장하지 않는다.
+
+`configs/guided-step-dev4.json`은 다음 좁은 가설을 검사한다. 64–512토큰 안의 첫 줄 경계에서 같은 prefix를 복사해 `Let's compute the quantities directly.\n`를 짧게 teacher-force하고, 나머지를 greedy로 생성해 32토큰 대안을 만든다. 원래 경로를 16토큰 더 이어간 뒤 대안의 과거 32토큰 KV를 한 번 교체한다. 원래 텍스트와 기존 suffix KV는 보존하며, gold·judge·학습을 쓰지 않는다. prefix가 길거나 EOS/think 종료를 포함하면 쓰기 전에 거부한다.
+
+이번 개발 gate는 **양쪽 모두 2,048 출력 토큰**의 비용 제한 설정이다. 긴 추론의 완주율을 높일 수 있는지를 본다. 4,096/32,768 토큰 또는 무제한 추론 대비 정확도 개선으로 해석하면 안 된다. 동일 개발 ID를 유지하며, QA 결과를 보기 전에 설정을 고정했다. 이 묶음은 후보 생성·분기 위치·지연을 함께 바꾼 가설로, 각 요소의 독립 효과를 주장하지 않는다.
+
+```bash
+uv run --frozen dirty-swapping run --datasets gsm8k --split development \
+  --config configs/guided-step-dev4.json --run-name guided-dev4
+```
+
+개발 gate에서 개선이 있으면 설정을 고정해 `configs/guided-step-heldout8.json`의 별도 test 8문제로 확인한다. test 결과를 보지 않고 seed 첫 4개와 입력 길이 상위 4개를 선택했다: 1259, 1038, 524, 379, 1077, 1209, 1199, 1176. 전체 GSM8K test 점수가 아니라 작은 독립 확인 cohort다.

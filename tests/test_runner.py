@@ -1,4 +1,5 @@
 import json
+import signal
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +9,14 @@ from unittest.mock import patch
 import torch
 
 from dirty_swapping.config import load_spec, runtime_spec
-from dirty_swapping.runner import create_run, execute, report, run_case, selected_rows
+from dirty_swapping.runner import (
+    _graceful_interrupts,
+    create_run,
+    execute,
+    report,
+    run_case,
+    selected_rows,
+)
 
 
 class FakeTokenizer:
@@ -111,6 +119,18 @@ class NumericBackend(FakeBackend):
 
 
 class RunnerTests(unittest.TestCase):
+    def test_duplicate_interrupts_are_ignored_and_handlers_restored(self):
+        before = {item: signal.getsignal(item) for item in (signal.SIGINT, signal.SIGTERM)}
+        with _graceful_interrupts():
+            handler = signal.getsignal(signal.SIGINT)
+            with self.assertRaises(KeyboardInterrupt):
+                handler(signal.SIGINT, None)
+            self.assertEqual(signal.getsignal(signal.SIGINT), signal.SIG_IGN)
+            self.assertEqual(signal.getsignal(signal.SIGTERM), signal.SIG_IGN)
+            handler(signal.SIGINT, None)
+        for item, old in before.items():
+            self.assertEqual(signal.getsignal(item), old)
+
     def setUp(self):
         self.spec = load_spec()
         self.spec["generation"].update(

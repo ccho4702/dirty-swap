@@ -7,6 +7,7 @@ import fcntl
 import json
 import platform
 import re
+import signal
 import statistics
 import subprocess
 import threading
@@ -192,7 +193,7 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
     branch_position = state.prompt_length + branch_after if policy == "fixed" else None
     swap_event = {
         "swapped": False,
-        "reason": "reasoning_ended_before_branch" if policy == "fixed" else "no_numeric_ambiguity",
+        "reason": "reasoning_ended_before_branch" if policy == "fixed" else f"no_{policy}",
     }
     branched = False
     scanned = 0
@@ -211,6 +212,9 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
             ):
                 scanned += 1
                 trigger = backend.numeric_ambiguity(state, gen["min_top2_ratio"])
+            elif policy == "reasoning_step" and branch_after <= generated <= gen["branch_scan_end"]:
+                scanned += 1
+                trigger = backend.reasoning_step_boundary(state)
         if trigger is not None:
             branched = True
             branch_position = len(state.ids)
@@ -244,6 +248,7 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
                     probe_config=gen.get("probe"),
                     question=row["question"],
                     judge=judge,
+                    alternative_prefix=gen.get("alternative_prefix"),
                 )
                 state = event.state
                 swap_event = {
@@ -258,6 +263,7 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
                     "judge_s": event.judge_s,
                     "judgment": event.judgment,
                     "trigger": trigger,
+                    "candidate_generation": gen["alternative_selection"],
                 }
                 continue
             swap_event = {"swapped": False, "reason": "insufficient_output_budget"}
@@ -300,9 +306,37 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
 
 def execute(run: Path, work_dir: Path, *, backend_factory=TransformersBackend) -> dict:
     """Execute or resume a run; a file lock prevents two controllers racing."""
-    with (run / ".controller.lock").open("a") as lock:
+    with _graceful_interrupts(), (run / ".controller.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         return _execute_locked(run, work_dir, backend_factory=backend_factory)
+
+
+@contextmanager
+def _graceful_interrupts():
+    """Ignore duplicate forwarded signals until atomic status cleanup is done."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    signals = (signal.SIGINT, signal.SIGTERM)
+    previous = {item: signal.getsignal(item) for item in signals}
+    received = False
+
+    def interrupt(signum, frame):
+        nonlocal received
+        if received:
+            return
+        received = True
+        for item in signals:
+            signal.signal(item, signal.SIG_IGN)
+        raise KeyboardInterrupt(f"signal {signum}")
+
+    for item in signals:
+        signal.signal(item, interrupt)
+    try:
+        yield
+    finally:
+        for item, handler in previous.items():
+            signal.signal(item, handler)
 
 
 def _execute_locked(run: Path, work_dir: Path, *, backend_factory) -> dict:
