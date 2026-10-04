@@ -8,17 +8,27 @@ prefix, absolute positions, model, and attention implementation.
 from __future__ import annotations
 
 from typing import Any
+import math
 
 import torch
 
 
-def swap_kv_segment(main_cache: Any, alternative_cache: Any, start: int, length: int) -> None:
-    """Overwrite [start, start + length) in every key and value tensor in place.
+def swap_kv_segment(
+    main_cache: Any,
+    alternative_cache: Any,
+    start: int,
+    length: int,
+    *,
+    strength: float = 1.0,
+) -> None:
+    """Blend an equal-length donor span into every key and value tensor in place.
 
     Expected tensor layout is [batch, kv_heads, sequence, head_dim]. Only
     full-attention DynamicCache layers are supported. Fail closed for other
     cache types rather than silently applying an incorrect partial edit.
     """
+    if type(strength) not in (int, float) or not math.isfinite(strength) or not 0 <= strength <= 1:
+        raise ValueError("swap strength must be finite and between zero and one")
     if start < 0 or length <= 0:
         raise ValueError("start must be nonnegative and length must be positive")
     main_layers = getattr(main_cache, "layers", None)
@@ -49,9 +59,17 @@ def swap_kv_segment(main_cache: Any, alternative_cache: Any, start: int, length:
                 raise ValueError(f"layer {index}: replacement exceeds {name} sequence length")
 
     # Validate all layers before any write, so invalid input never leaves a partial swap.
+    if strength == 0:
+        return
     with torch.inference_mode():
         for main, alternative in zip(main_layers, alternative_layers):
             for name in ("keys", "values"):
                 destination = getattr(main, name)
                 source = getattr(alternative, name)
-                destination[:, :, start:end, :].copy_(source[:, :, start:end, :])
+                target = destination[:, :, start:end, :]
+                donor = source[:, :, start:end, :]
+                if strength == 1:
+                    target.copy_(donor)
+                else:
+                    # Accumulate in float32; retain the original cache dtype and layout.
+                    target.copy_(torch.lerp(target.float(), donor.float(), strength))

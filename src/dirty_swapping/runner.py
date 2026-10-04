@@ -277,10 +277,12 @@ def run_case(
                     alternative_prefix=alternative_prefix,
                     soft_config=gen.get("soft"),
                     seed=case_seed,
+                    swap_strength=gen.get("swap_strength", 1.0),
                 )
                 state = event.state
                 swap_event = {
                     "swapped": event.swapped,
+                    "swap_strength": gen.get("swap_strength", 1.0),
                     "reason": "draft_swapped" if draft_mode and event.swapped else event.reason,
                     "main_token": event.main_token,
                     "alternative_token": event.alternative_token,

@@ -14,7 +14,13 @@ from pathlib import Path
 
 from dirty_swapping.backend import TransformersBackend
 from dirty_swapping.config import load_spec, runtime_spec
-from dirty_swapping.core import atomic_json, digest, file_digest, now, source_fingerprint
+from dirty_swapping.core import (
+    atomic_json,
+    digest,
+    file_digest,
+    now,
+    source_fingerprint,
+)
 from dirty_swapping.draft import draft_model_config, generate_draft
 from dirty_swapping.engine import intervene
 from dirty_swapping.protocol import SwapPlan
@@ -120,8 +126,26 @@ def main():
             enabled=True,
             selection="guided_swap",
             alternative_prefix=draft["prefix"],
+            swap_strength=spec["generation"].get("swap_strength", 1.0),
         )
         assert edited.swapped, edited.reason
+        zero = intervene(
+            backend,
+            backend.fork(state),
+            plan,
+            enabled=True,
+            selection="guided_swap",
+            alternative_prefix=draft["prefix"],
+            swap_strength=0,
+        )
+        assert not zero.swapped and zero.reason == "zero_strength"
+        assert ordinary.state.ids == zero.state.ids
+        for before, after in zip(ordinary.state.cache.layers, zero.state.cache.layers, strict=True):
+            assert backend.torch.equal(before.keys, after.keys)
+            assert backend.torch.equal(before.values, after.values)
+        backend.advance(zero.state, 1)
+        zero_next_token = zero.state.ids[-1]
+        del zero
         assert ordinary.state.ids == edited.state.ids, "existing token IDs changed"
         assert backend.torch.equal(ordinary.state.next_logits, edited.state.next_logits), (
             "stale logits changed"
@@ -154,6 +178,7 @@ def main():
         progress(3, "all layer prefix/suffix checks passed")
         old_ids = list(edited.state.ids)
         backend.advance(ordinary.state, 1)
+        assert ordinary.state.ids[-1] == zero_next_token
         backend.advance(edited.state, 1)
         assert ordinary.state.ids[-1] == edited.state.ids[-1], (
             "first future token must use stale logits"
@@ -180,12 +205,14 @@ def main():
         )
         result = {
             "passed": True,
+            "swap_strength": spec["generation"].get("swap_strength", 1.0),
             "id": row["id"],
             "layers": len(retained),
             "rollout_tokens": plan.rollout_tokens,
             "delay_tokens": plan.delay_tokens,
             "device": str(backend.device),
             "models_frozen": True,
+            "zero_strength_identity": True,
             "existing_ids_preserved": True,
             "prefix_kv_preserved": True,
             "suffix_kv_preserved": True,

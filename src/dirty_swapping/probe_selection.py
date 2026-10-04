@@ -20,7 +20,15 @@ class ProbeSelection:
 
 
 def choose_probe(
-    backend, main, alternative_cache, plan, question: str, config: dict, judge
+    backend,
+    main,
+    alternative_cache,
+    plan,
+    question: str,
+    config: dict,
+    judge,
+    *,
+    swap_strength: float = 1.0,
 ) -> ProbeSelection:
     """Commit the selected trial's future tokens verbatim, including no-swap."""
     backend.synchronize()
@@ -35,6 +43,7 @@ def choose_probe(
         alternative_cache,
         plan.branch_position,
         plan.rollout_tokens,
+        strength=swap_strength,
     )
     backend.synchronize()
     copy_seconds = time.monotonic() - copy_started

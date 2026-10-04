@@ -39,6 +39,9 @@ def validate_spec(spec: dict) -> dict:
     if spec.get("protocol") != "dirty-swapping-v1":
         raise ValueError("unsupported protocol")
     model, gen, data = spec["model"], spec["generation"], spec["data"]
+    strength = gen.get("swap_strength", 1.0)
+    if type(strength) not in (int, float) or not math.isfinite(strength) or not 0 <= strength <= 1:
+        raise ValueError("generation.swap_strength must be finite and between zero and one")
     policy = gen.get("branch_policy", "fixed")
     if policy not in ("fixed", "numeric_ambiguity", "reasoning_step"):
         raise ValueError("unsupported branch policy")

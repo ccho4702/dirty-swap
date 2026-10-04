@@ -1,9 +1,11 @@
 import unittest
+import copy
 from types import SimpleNamespace
 
 import torch
 
 from dirty_swapping.cache import swap_kv_segment
+from dirty_swapping.config import load_spec, validate_spec
 
 
 def make_cache(value, length=8):
@@ -14,6 +16,42 @@ def make_cache(value, length=8):
 
 
 class CacheTests(unittest.TestCase):
+    def test_residual_strength_and_donor_preservation(self):
+        for dtype in (torch.float32, torch.bfloat16):
+            main, alternative = make_cache(1), make_cache(9, 5)
+            for cache in (main, alternative):
+                for layer in cache.layers:
+                    layer.keys = layer.keys.to(dtype)
+                    layer.values = layer.values.to(dtype)
+            saved = copy.deepcopy(alternative)
+            swap_kv_segment(main, alternative, 2, 2, strength=0.25)
+            for layer, donor, original in zip(main.layers, alternative.layers, saved.layers):
+                for name in ("keys", "values"):
+                    tensor = getattr(layer, name)
+                    self.assertEqual(tensor.dtype, dtype)
+                    self.assertTrue(torch.all(tensor[:, :, :2] == 1))
+                    self.assertTrue(torch.all(tensor[:, :, 2:4] == 3))
+                    self.assertTrue(torch.all(tensor[:, :, 4:] == 1))
+                    self.assertTrue(torch.equal(getattr(donor, name), getattr(original, name)))
+
+    def test_zero_strength_is_bitwise_identity(self):
+        main, alternative = make_cache(1), make_cache(9)
+        swap_kv_segment(main, alternative, 2, 2, strength=0)
+        for layer in main.layers:
+            self.assertTrue(torch.all(layer.keys == 1))
+            self.assertTrue(torch.all(layer.values == 1))
+
+    def test_strength_rejects_invalid_values_before_mutation(self):
+        for value in (-0.1, 1.1, float("nan"), float("inf"), True, "0.5"):
+            main = make_cache(1)
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                swap_kv_segment(main, make_cache(9), 2, 2, strength=value)
+            self.assertTrue(torch.all(main.layers[0].keys == 1))
+            spec = load_spec()
+            spec["generation"]["swap_strength"] = value
+            with self.assertRaises(ValueError):
+                validate_spec(spec)
+
     def test_only_selected_segment_changes(self):
         main, alternative = make_cache(1), make_cache(9, 5)
         swap_kv_segment(main, alternative, 2, 2)

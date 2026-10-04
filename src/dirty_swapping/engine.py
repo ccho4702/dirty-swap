@@ -55,6 +55,7 @@ def intervene(
     alternative_prefix: str | None = None,
     soft_config: dict | None = None,
     seed: int = 0,
+    swap_strength: float = 1.0,
 ) -> InterventionResult:
     """Commit top-1 rollout, then optionally transplant top-2 KV after a delay.
 
@@ -175,7 +176,14 @@ def intervene(
         from .probe_selection import choose_probe
 
         chosen = choose_probe(
-            adapter, main, adapter.cache(alternative), plan, question, probe_config, judge
+            adapter,
+            main,
+            adapter.cache(alternative),
+            plan,
+            question,
+            probe_config,
+            judge,
+            swap_strength=swap_strength,
         )
         return InterventionResult(
             chosen.state,
@@ -194,13 +202,21 @@ def intervene(
     adapter.synchronize()
     copy_started = time.monotonic()
     swap_kv_segment(
-        adapter.cache(main), adapter.cache(alternative), plan.branch_position, plan.rollout_tokens
+        adapter.cache(main),
+        adapter.cache(alternative),
+        plan.branch_position,
+        plan.rollout_tokens,
+        strength=swap_strength,
     )
     adapter.synchronize()
     return InterventionResult(
         main,
-        True,
-        {"guided_swap": "guided_swapped", "soft_swap": "soft_swapped"}.get(selection, "swapped"),
+        swap_strength != 0,
+        "zero_strength"
+        if swap_strength == 0
+        else {"guided_swap": "guided_swapped", "soft_swap": "soft_swapped"}.get(
+            selection, "swapped"
+        ),
         top[0],
         alternative_token,
         alternative_rollout_s,

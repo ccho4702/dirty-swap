@@ -19,6 +19,22 @@ The baseline uses the same model, prompt, top-1 main-path rollout, decoding limi
 
 `swap_kv_segment` validates every layer before writing. It assumes the Transformers `DynamicCache` full-attention tensor layout `[batch, kv_heads, seq_len, head_dim]`. Sliding-window and static caches are rejected; quantized or heterogeneous caches with incompatible tensors also fail validation. A real-model smoke test should assert suffix preservation because cache implementations can differ by model and library version.
 
+## Research extension: residual replacement
+
+On `changho`, `generation.swap_strength` optionally replaces the selected span with
+`(1 - strength) * main + strength * donor`, for both K and V in every layer.
+The default, 1, is the original exact copy. Zero performs no writes, but still
+computes the candidate as a compute control and records `swapped=false`.
+Fractional strengths accumulate in float32 and store in the original cache dtype.
+All prefix/suffix KV, committed text, positions, and stale next-token logits remain
+unchanged. The blend is a candidate representation; it is not an exact marginal
+over reasoning paths. It does not imply accuracy preservation.
+
+`configs/residual-draft-transfer6.json` uses the same generic draft prompt, 0.5
+strength, and branching criteria for all datasets. The main model re-encodes donor
+text at the original prefix; the draft model's cache is never copied across models.
+This is a fixed-strength experiment, not an implementation of a learned gate.
+
 ## Planned ablations
 
 Start with `k=4`, rollout 32, delay 128, one fixed branch. Then vary one factor at a time: candidate count, rollout length, delay, branch position, and alternative selector. A verifier-based selector must be trained or tuned on development data only. Compare swap versus no-swap while retaining alternative rollout computation to isolate the cache edit effect from its compute overhead; also report the standard no-rollout baseline.
