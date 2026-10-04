@@ -28,6 +28,10 @@ def runtime_spec(
         result["model"]["device"] = device
         if device == "cpu":
             result["model"]["dtype"] = "float32"
+        if result["generation"]["alternative_selection"] == "draft_swap":
+            result["generation"]["draft"]["model"]["device"] = device
+            if device == "cpu":
+                result["generation"]["draft"]["model"]["dtype"] = "float32"
     return validate_spec(result)
 
 
@@ -63,6 +67,7 @@ def validate_spec(spec: dict) -> dict:
         "second_highest_first_token_probability",
         "probe_preference",
         "guided_swap",
+        "draft_swap",
     ):
         raise ValueError("unsupported alternative selector")
     if gen["alternative_selection"] == "guided_swap":
@@ -75,6 +80,26 @@ def validate_spec(spec: dict) -> dict:
             raise ValueError("guided swap requires a nonempty alternative_prefix")
     elif "alternative_prefix" in gen:
         raise ValueError("alternative_prefix requires guided_swap")
+    if gen["alternative_selection"] == "draft_swap":
+        draft = gen["draft"]
+        child = {**model, **draft["model"], "enable_thinking": False}
+        if gen["candidate_count"] != 2:
+            raise ValueError("draft swap requires exactly one alternative")
+        if not child["name"] or not re.fullmatch(r"[0-9a-f]{40}", child["revision"]):
+            raise ValueError("draft model requires a name and pinned commit")
+        if not re.fullmatch(r"cpu|cuda:\d+", child["device"]) or child["dtype"] not in (
+            "float32",
+            "float16",
+            "bfloat16",
+        ):
+            raise ValueError("invalid draft model device or dtype")
+        for key in ("max_input_tokens", "max_new_tokens", "download_workers"):
+            if type(draft[key]) is not int or draft[key] < 1:
+                raise ValueError(f"draft.{key} must be a positive integer")
+        if draft["max_input_tokens"] + draft["max_new_tokens"] > child["max_context_tokens"]:
+            raise ValueError("draft caps exceed its model context")
+        if not isinstance(draft["prompt"], str) or not draft["prompt"].strip():
+            raise ValueError("draft prompt must be nonempty")
     probe_budget = 0
     if gen["alternative_selection"] == "probe_preference":
         if gen["candidate_count"] != 2:

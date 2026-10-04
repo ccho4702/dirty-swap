@@ -66,6 +66,9 @@ def main(argv: list[str] | None = None) -> None:
         download_datasets(work_dir, datasets)
         if not getattr(args, "data_only", False):
             download_models(spec)
+            from .draft import download_draft_model
+
+            download_draft_model(spec)
     if args.command in ("prepare", "setup"):
         prepare(work_dir, spec, datasets)
     if args.command == "run":

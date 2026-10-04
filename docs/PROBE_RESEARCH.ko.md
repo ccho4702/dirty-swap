@@ -72,3 +72,23 @@ uv run --frozen dirty-swapping run --datasets gsm8k --split development \
 개발 gate에서 개선이 있으면 설정을 고정해 `configs/guided-step-heldout8.json`의 별도 test 8문제로 확인한다. test 결과를 보지 않고 seed 첫 4개와 입력 길이 상위 4개를 선택했다: 1259, 1038, 524, 379, 1077, 1209, 1199, 1176. 전체 GSM8K test 점수가 아니라 작은 독립 확인 cohort다.
 
 32토큰 guided 개발 gate에서는 baseline 2/4, swap 2/4, wins/losses 0/0이었다. 실제 교체는 4/4 실행됐고 평균 시간은 68.32→66.34초였으나 작은 표본의 시간 변동도 있어 속도 개선을 확정하지 않는다. 더 큰 표본으로 확장하지 않고 **rollout 길이만 128**로 늘린 `guided-step128-dev4.json`을 다음 gate로 고정한다. 비용 상한·질문·분기·지연·guidance는 그대로다. 대안 계산 텍스트도 raw case에 보존한다. heldout ID는 이미 정한 같은 8개를 쓰며 결과를 보고 고르지 않는다.
+
+128토큰 guided gate의 전체 결과도 baseline 2/4, swap 2/4였다. 1292를 새로 맞혔지만 1202가 토큰 상한 안에서 답을 못 내는 새 오류가 되어 wins/losses 1/1이었다. 평균 시간 66.24→73.89초(+11.5%)다. 개선 사례 하나만으로 확대하지 않는다. 미리 준비한 heldout 8개 plan은 실행하지 않았다. 실제 SIGTERM 후 5/8에서 재개했으며 기존 5개 checkpoint SHA256이 그대로임을 확인했다. 첫 재개 case의 초기 실행 비용과 단일 측정 변동 때문에 작은 시간 차이를 일반화하지 않는다.
+
+숫자 분기 trace를 점검하니 첫 1292의 3/4는 예시 연도 2023/2024의 차이였다. 숫자라는 이유만으로 의미 있는 계산 대안으로 취급하면 안 된다. 128토큰의 일반 guidance도 계산 대신 질문을 재서술하는 경우가 많았다. 다음에는 `The calculation is: `라는 짧은 대안 시작으로 실제 계산을 생성하는지 **후보 생성 gate**부터 검사한다. gold는 보지 않으며, 이 단계는 QA 점수가 아니다.
+
+## 짧은 풀이 초안의 KV 재사용
+
+일반 guidance, 식만 요구하는 초안, 조기 boxed 답은 후보 gate에서 제외했다. 식만 만들면 요청 수량을 잘못 해석하는 예시도 있었다. 다음 후보는 `configs/draft-swap-dev4.json`이다. main은 기존 Qwen3-4B-Thinking-2507을 유지하고, [Qwen3-4B-Instruct-2507](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) `cdbee75f17c01a7cc42f958dc650907174af0554`는 질문만 받아 essential arithmetic과 boxed 답을 짧게 작성한다. 초안 최대 512토큰·입력 2,048토큰이다. 짧은 후보 gate에서 실제 수량 계산이 포함된 풀이가 나왔지만 이것은 QA 성능 결과가 아니다.
+
+**두 모델의 KV를 직접 섞지 않는다.** 초안의 끝에서 완전한 마지막 boxed 답을 포함하는 줄들을 골라 최대 96 main-model 토큰 안에 넣는다. 이 텍스트를 원래 main prefix의 사본에서 teacher-force해 main 모델 자체의 KV를 만든다. 실제 span 길이는 이 텍스트의 main-token 개수다. 원래 경로를 같은 길이와 지연 16토큰만큼 이어간 뒤 그 과거 KV만 교체한다. suffix KV와 원래 token ID는 보존한다. 숫자식을 외부 calculator로 계산하거나 gold를 제공하지 않는다.
+
+초안이 EOS까지 끝나지 않거나 boxed 답이 없거나, 문맥·span 상한 초과 또는 특수 token이 포함되면 no-swap이다. 형식 검사는 **내용의 정답을 보증하지 않는다**. 모델이 잘못된 초안을 만들면 성능이 떨어질 수 있으므로 개발 wins/losses gate를 먼저 확인한다. 같은 기존 개발 4개와 미리 정한 test 8개 ID를 유지한다. main 출력 상한은 양쪽 모두 2,048이다.
+
+같은 paired 프로세스에 두 모델이 resident인 설정이다. baseline은 초안 호출도 KV 교체도 하지 않지만, 보고된 GPU peak에는 idle 초안 모델도 포함될 수 있어 순정 최소 메모리로 해석하지 않는다. `draft.model.device`로 초안 장치를 지정할 수 있고 `--device` override는 두 모델에 적용한다. 전체 latency에는 초안 생성·텍스트 처리·main KV 준비가 포함되며 `mean_draft_s`로 초안 비용도 따로 보고한다. 모델 로드는 기존 규칙처럼 per-case timer 밖에 있다. 두 모델은 모두 eval/frozen이며 학습하지 않는다.
+
+```bash
+uv run --frozen dirty-swapping setup --datasets gsm8k --config configs/draft-swap-dev4.json
+uv run --frozen dirty-swapping run --datasets gsm8k --split development \
+  --config configs/draft-swap-dev4.json --run-name draft-dev4
+```

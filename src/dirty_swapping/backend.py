@@ -18,6 +18,10 @@ class DecodeState:
     next_logits: Any
 
 
+class PromptLimitError(ValueError):
+    """A prompt was rejected before allocating a model cache."""
+
+
 class TransformersBackend:
     def __init__(self, config: dict, *, model: Any = None, tokenizer: Any = None):
         import torch
@@ -75,14 +79,19 @@ class TransformersBackend:
         return None
 
     def prefill(self, row: dict) -> DecodeState:
+        return self.prefill_text(instruction(row) + row["question"])
+
+    def prefill_text(self, text: str, *, input_cap: int | None = None) -> DecodeState:
         ids = self.tokenizer.apply_chat_template(
-            [{"role": "user", "content": instruction(row) + row["question"]}],
+            [{"role": "user", "content": text}],
             tokenize=True,
             add_generation_prompt=True,
-            enable_thinking=True,
+            enable_thinking=self.config.get("enable_thinking", True),
         )
         if not ids or len(ids) > self.config["max_context_tokens"]:
-            raise ValueError("empty prompt or prompt exceeds context")
+            raise PromptLimitError("empty prompt or prompt exceeds context")
+        if input_cap is not None and len(ids) > input_cap:
+            raise PromptLimitError("prompt exceeds input cap")
         cache = None
         output = None
         with self.torch.inference_mode():

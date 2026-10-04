@@ -174,7 +174,9 @@ def _heartbeat(label: str, log, interval: int, progress=None):
         thread.join()
 
 
-def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> dict:
+def run_case(
+    backend: TransformersBackend, row: dict, spec: dict, arm: str, *, drafter=None
+) -> dict:
     if arm not in ARMS:
         raise ValueError("unknown arm")
     gen = spec["generation"]
@@ -183,6 +185,8 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
         backend.torch.manual_seed(case_seed)
     if hasattr(backend, "begin_measurement"):
         backend.begin_measurement()
+    if drafter is not None and hasattr(drafter, "begin_measurement"):
+        drafter.begin_measurement()
     backend.synchronize()
     started = time.monotonic()
     state = backend.prefill(row)
@@ -219,18 +223,44 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
             branched = True
             branch_position = len(state.ids)
             probe_mode = gen["alternative_selection"] == "probe_preference"
-            if arm == "swap" and probe_mode and row["answer_format"] != "math":
-                swap_event = {"swapped": False, "reason": "probe_math_only"}
+            draft_mode = gen["alternative_selection"] == "draft_swap"
+            if arm == "swap" and (probe_mode or draft_mode) and row["answer_format"] != "math":
+                swap_event = {
+                    "swapped": False,
+                    "reason": "draft_math_only" if draft_mode else "probe_math_only",
+                }
                 backend.advance(state, 1)
                 continue
+            draft = None
+            actual_rollout = gen["rollout_tokens"]
+            alternative_prefix = gen.get("alternative_prefix")
+            if arm == "swap" and draft_mode:
+                if drafter is None:
+                    raise ValueError("draft swap requires its configured draft backend")
+                from .draft import generate_draft
+
+                draft = generate_draft(
+                    drafter, backend, row["question"], gen["draft"], actual_rollout
+                )
+                if draft["prefix"] is None:
+                    swap_event = {
+                        "swapped": False,
+                        "reason": draft["reason"],
+                        "draft": draft,
+                        "draft_s": draft["seconds"],
+                    }
+                    backend.advance(state, 1)
+                    continue
+                actual_rollout = draft["rollout_tokens"]
+                alternative_prefix = draft["prefix"]
             probe_budget = gen["probe"]["tokens"] if probe_mode and arm == "swap" else 0
             if (
-                generated + gen["rollout_tokens"] + gen["delay_tokens"] + probe_budget
+                generated + actual_rollout + gen["delay_tokens"] + probe_budget
                 <= gen["max_new_tokens"]
             ):
                 plan = SwapPlan(
                     branch_position=branch_position,
-                    rollout_tokens=gen["rollout_tokens"],
+                    rollout_tokens=actual_rollout,
                     delay_tokens=gen["delay_tokens"],
                     candidate_count=gen["candidate_count"],
                 )
@@ -244,16 +274,20 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
                     state,
                     plan,
                     enabled=arm == "swap",
-                    selection=gen["alternative_selection"],
+                    selection=(
+                        "guided_swap" if arm == "swap" else "second_highest_first_token_probability"
+                    )
+                    if draft_mode
+                    else gen["alternative_selection"],
                     probe_config=gen.get("probe"),
                     question=row["question"],
                     judge=judge,
-                    alternative_prefix=gen.get("alternative_prefix"),
+                    alternative_prefix=alternative_prefix,
                 )
                 state = event.state
                 swap_event = {
                     "swapped": event.swapped,
-                    "reason": event.reason,
+                    "reason": "draft_swapped" if draft_mode and event.swapped else event.reason,
                     "main_token": event.main_token,
                     "alternative_token": event.alternative_token,
                     "alternative_rollout_s": event.alternative_rollout_s,
@@ -264,6 +298,9 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
                     "judgment": event.judgment,
                     "trigger": trigger,
                     "candidate_generation": gen["alternative_selection"],
+                    "rollout_tokens": actual_rollout,
+                    "draft": draft,
+                    "draft_s": draft["seconds"] if draft is not None else 0.0,
                     "alternative_text": (
                         backend.tokenizer.decode(event.alternative_ids, skip_special_tokens=False)
                         if event.alternative_ids is not None
@@ -303,6 +340,11 @@ def run_case(backend: TransformersBackend, row: dict, spec: dict, arm: str) -> d
         "branch_scan_tokens": scanned,
         "peak_cuda_memory_mib": (
             backend.peak_memory_mib() if hasattr(backend, "peak_memory_mib") else None
+        ),
+        "draft_peak_cuda_memory_mib": (
+            drafter.peak_memory_mib()
+            if drafter is not None and hasattr(drafter, "peak_memory_mib")
+            else None
         ),
         "swap": swap_event,
         "finished_at": now(),
@@ -389,6 +431,11 @@ def _execute_locked(run: Path, work_dir: Path, *, backend_factory) -> dict:
         try:
             with _heartbeat("loading model", log, spec["execution"]["progress_interval_seconds"]):
                 backend = backend_factory(spec["model"])
+                drafter = None
+                if spec["generation"]["alternative_selection"] == "draft_swap":
+                    from .draft import draft_model_config
+
+                    drafter = backend_factory(draft_model_config(spec))
             started = time.monotonic()
             pending_at_start = total - completed
             for row in rows:
@@ -398,6 +445,7 @@ def _execute_locked(run: Path, work_dir: Path, *, backend_factory) -> dict:
                         continue
                     log(f"case {completed + 1}/{total} {row['id']} {arm}")
                     before_steps = getattr(backend, "forward_steps", 0)
+                    before_draft_steps = getattr(drafter, "forward_steps", 0)
                     target_steps = (
                         min(row["prompt_tokens"], spec["generation"]["max_input_tokens"])
                         + spec["generation"]["max_new_tokens"]
@@ -412,9 +460,20 @@ def _execute_locked(run: Path, work_dir: Path, *, backend_factory) -> dict:
                         target_steps += probe["tokens"] + 2 * (
                             probe["judge_input_cap"] + probe["judge_reasoning_tokens"] + 16
                         )
+                    if drafter is not None and arm == "swap":
+                        draft_config = spec["generation"]["draft"]
+                        target_steps += (
+                            draft_config["max_input_tokens"] + draft_config["max_new_tokens"]
+                        )
 
                     def progress():
-                        return getattr(backend, "forward_steps", 0) - before_steps, target_steps
+                        return (
+                            getattr(backend, "forward_steps", 0)
+                            - before_steps
+                            + getattr(drafter, "forward_steps", 0)
+                            - before_draft_steps,
+                            target_steps,
+                        )
 
                     with _heartbeat(
                         f"processing {row['id']} {arm}",
@@ -422,7 +481,11 @@ def _execute_locked(run: Path, work_dir: Path, *, backend_factory) -> dict:
                         spec["execution"]["progress_interval_seconds"],
                         progress,
                     ):
-                        result = run_case(backend, row, spec, arm)
+                        result = (
+                            run_case(backend, row, spec, arm, drafter=drafter)
+                            if drafter is not None
+                            else run_case(backend, row, spec, arm)
+                        )
                     atomic_json(path, {"payload": result, "sha256": digest(result)})
                     completed += 1
                     newly_completed = pending_at_start - (total - completed)
@@ -525,6 +588,9 @@ def report(run: Path) -> dict:
                 if cases
                 else None,
                 "mean_judge_s": statistics.mean(row["swap"].get("judge_s", 0) for row in cases)
+                if cases
+                else None,
+                "mean_draft_s": statistics.mean(row["swap"].get("draft_s", 0) for row in cases)
                 if cases
                 else None,
                 "swap_rate": (
