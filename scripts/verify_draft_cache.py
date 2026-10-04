@@ -90,6 +90,10 @@ def main():
         drafter = TransformersBackend(draft_model_config(spec))
         progress(1, "models ready")
         state = backend.prefill(row)
+        sampling = spec["generation"].get("sampling")
+        seed = int(digest([spec["generation"]["seed"], row["id"]])[:8], 16)
+        if sampling is not None:
+            backend.configure_sampling(state, sampling, seed)
         backend.advance(state, spec["generation"]["branch_after_reasoning_tokens"])
         while (
             len(state.ids) - state.prompt_length <= spec["generation"]["branch_scan_end"]
@@ -127,6 +131,7 @@ def main():
             selection="guided_swap",
             alternative_prefix=draft["prefix"],
             swap_strength=spec["generation"].get("swap_strength", 1.0),
+            close_thinking=spec["generation"]["draft"].get("close_thinking", False),
         )
         assert edited.swapped, edited.reason
         zero = intervene(
@@ -137,6 +142,7 @@ def main():
             selection="guided_swap",
             alternative_prefix=draft["prefix"],
             swap_strength=0,
+            close_thinking=spec["generation"]["draft"].get("close_thinking", False),
         )
         assert not zero.swapped and zero.reason == "zero_strength"
         assert ordinary.state.ids == zero.state.ids
@@ -184,10 +190,13 @@ def main():
             "first future token must use stale logits"
         )
         prompt_ids = backend.torch.tensor([state.ids[: state.prompt_length]], device=backend.device)
+        if sampling is not None:
+            backend.torch.manual_seed(seed)
         native = backend.model.generate(
             input_ids=prompt_ids,
             attention_mask=backend.torch.ones_like(prompt_ids),
-            do_sample=False,
+            do_sample=sampling is not None,
+            **(sampling or {}),
             max_new_tokens=len(ordinary.state.ids) - state.prompt_length,
             pad_token_id=backend.tokenizer.pad_token_id or min(backend.eos_ids),
         )
@@ -205,6 +214,8 @@ def main():
         )
         result = {
             "passed": True,
+            "sampling": sampling,
+            "donor_closed_thinking": spec["generation"]["draft"].get("close_thinking", False),
             "swap_strength": spec["generation"].get("swap_strength", 1.0),
             "id": row["id"],
             "layers": len(retained),

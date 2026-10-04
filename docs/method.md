@@ -35,6 +35,28 @@ strength, and branching criteria for all datasets. The main model re-encodes don
 text at the original prefix; the draft model's cache is never copied across models.
 This is a fixed-strength experiment, not an implementation of a learned gate.
 
-## Planned ablations
+## Research extension: sampling and completed-answer donors
+
+`generation.sampling = {"temperature": 0.6, "top_k": 20, "top_p": 0.95}` enables
+the same HF filtering and private RNG in both arms. Omitting it retains greedy
+decoding. Forking a trace copies its RNG state; candidate generation cannot advance
+the main RNG. The main's first branch token follows its configured decoding rule.
+For sampled main tokens, the ordinary token donor is the highest-ranked other
+proposal; the historical `second_highest_first_token_probability` name refers to
+the greedy default. Judge and independent draft prefills remain greedy.
+
+`generation.draft.close_thinking=true` permits a donor prefix starting with exactly
+one `</think>` token followed by the generic draft answer. The main model encodes
+this prefix under its original context and absolute positions. Its actual token
+length, including the marker, determines the equal-length main span. EOS and extra
+closing markers are rejected. The main must still be within reasoning when edited.
+This extension permits answer-phase donor KV while retaining every committed main
+ID and all prefix/suffix KV. It never inserts a forced closing marker into the main
+text and never recomputes suffix entries. Default donors retain the original
+requirement of remaining within reasoning.
+
+The hypothesis and fresh paper review are in `docs/CLOSED_DONOR_RESEARCH.ko.md`.
+
+## Historical initial ablation plan
 
 Start with `k=4`, rollout 32, delay 128, one fixed branch. Then vary one factor at a time: candidate count, rollout length, delay, branch position, and alternative selector. A verifier-based selector must be trained or tuned on development data only. Compare swap versus no-swap while retaining alternative rollout computation to isolate the cache edit effect from its compute overhead; also report the standard no-rollout baseline.

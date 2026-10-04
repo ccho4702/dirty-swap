@@ -190,6 +190,8 @@ def run_case(
     backend.synchronize()
     started = time.monotonic()
     state = backend.prefill(row)
+    if "sampling" in gen:
+        backend.configure_sampling(state, gen["sampling"], case_seed)
     if state.prompt_length > gen["max_input_tokens"]:
         raise ValueError("prompt exceeds configured input cap")
     branch_after = gen["branch_after_reasoning_tokens"]
@@ -278,11 +280,13 @@ def run_case(
                     soft_config=gen.get("soft"),
                     seed=case_seed,
                     swap_strength=gen.get("swap_strength", 1.0),
+                    close_thinking=(arm == "swap" and draft_mode and gen["draft"].get("close_thinking", False)),
                 )
                 state = event.state
                 swap_event = {
                     "swapped": event.swapped,
                     "swap_strength": gen.get("swap_strength", 1.0),
+                    "donor_closed_thinking": bool(draft and draft.get("donor_closed_thinking", False)),
                     "reason": "draft_swapped" if draft_mode and event.swapped else event.reason,
                     "main_token": event.main_token,
                     "alternative_token": event.alternative_token,

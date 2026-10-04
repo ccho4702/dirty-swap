@@ -16,8 +16,11 @@ class GenerationAdapter(Protocol):
     def fork(self, state: Any) -> Any: ...
     def sequence_length(self, state: Any) -> int: ...
     def top_tokens(self, state: Any, count: int) -> list[int]: ...
+    def select_token(self, state: Any) -> int: ...
     def rollout(self, state: Any, first_token: int, total_tokens: int) -> Any: ...
-    def guided_rollout(self, state: Any, prefix: str, total_tokens: int) -> Any: ...
+    def guided_rollout(
+        self, state: Any, prefix: str, total_tokens: int, *, close_thinking: bool = False
+    ) -> Any: ...
     def soft_rollout(self, state: Any, total_tokens: int, config: dict, seed: int) -> Any: ...
     def advance(self, state: Any, token_count: int) -> Any: ...
     def cache(self, state: Any) -> Any: ...
@@ -56,6 +59,7 @@ def intervene(
     soft_config: dict | None = None,
     seed: int = 0,
     swap_strength: float = 1.0,
+    close_thinking: bool = False,
 ) -> InterventionResult:
     """Commit top-1 rollout, then optionally transplant top-2 KV after a delay.
 
@@ -76,6 +80,8 @@ def intervene(
         raise ValueError("soft swap requires one donor and its configuration")
     if selection == "guided_swap" and (not alternative_prefix or plan.candidate_count != 2):
         raise ValueError("guided swap requires one alternative and its prefix")
+    if close_thinking and selection != "guided_swap":
+        raise ValueError("closed donor requires guided_swap")
     if enabled and selection == "probe_preference" and (probe_config is None or judge is None):
         raise ValueError("probe selection requires configuration and a judge")
     expected = plan.candidate_count if enabled else 1
@@ -84,6 +90,11 @@ def intervene(
         raise ValueError("adapter returned too few distinct candidate tokens")
 
     main_state = adapter.fork(prefix_state) if enabled else prefix_state
+    # Sampling must also apply to the first token at a branch. Donor construction
+    # owns a separate state/RNG, so its draws never advance the committed path.
+    if hasattr(adapter, "select_token"):
+        main_token = adapter.select_token(main_state)
+        top = [main_token] + [token for token in top if token != main_token][: expected - 1]
     main = adapter.rollout(main_state, top[0], plan.rollout_tokens)
     if adapter.sequence_length(main) != plan.branch_position + plan.rollout_tokens:
         return InterventionResult(main, False, "main_ended_early", top[0], None)
@@ -107,8 +118,9 @@ def intervene(
                 )
                 alternative_token = candidate.ids[plan.branch_position]
             elif selection == "guided_swap":
+                options = {"close_thinking": True} if close_thinking else {}
                 candidate = adapter.guided_rollout(
-                    adapter.fork(prefix_state), alternative_prefix, plan.rollout_tokens
+                    adapter.fork(prefix_state), alternative_prefix, plan.rollout_tokens, **options
                 )
                 alternative_token = candidate.ids[plan.branch_position]
             else:
@@ -118,7 +130,9 @@ def intervene(
             if index == 1:
                 alternative = candidate
                 selected_alternative_left_reasoning = (
-                    adapter.finished(candidate) or adapter.reasoning_end(candidate) is not None
+                    adapter.finished(candidate) or (
+                        not close_thinking and adapter.reasoning_end(candidate) is not None
+                    )
                 )
         adapter.synchronize()
         alternative_rollout_s = time.monotonic() - started

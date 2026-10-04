@@ -10,6 +10,19 @@ from importlib.resources import files
 from pathlib import Path
 
 
+def validate_sampling(settings: dict) -> None:
+    if type(settings) is not dict or set(settings) != {"temperature", "top_k", "top_p"}:
+        raise ValueError("sampling requires temperature, top_k, and top_p")
+    if type(settings["top_k"]) is not int or settings["top_k"] < 1:
+        raise ValueError("sampling.top_k must be a positive integer")
+    for key in ("temperature", "top_p"):
+        value = settings[key]
+        if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+            raise ValueError(f"sampling.{key} must be finite and positive")
+    if settings["top_p"] > 1:
+        raise ValueError("sampling.top_p must not exceed one")
+
+
 def load_spec(path: Path | None = None) -> dict:
     source = (
         Path(path).read_text()
@@ -39,6 +52,8 @@ def validate_spec(spec: dict) -> dict:
     if spec.get("protocol") != "dirty-swapping-v1":
         raise ValueError("unsupported protocol")
     model, gen, data = spec["model"], spec["generation"], spec["data"]
+    if "sampling" in gen:
+        validate_sampling(gen["sampling"])
     strength = gen.get("swap_strength", 1.0)
     if type(strength) not in (int, float) or not math.isfinite(strength) or not 0 <= strength <= 1:
         raise ValueError("generation.swap_strength must be finite and between zero and one")
@@ -101,6 +116,8 @@ def validate_spec(spec: dict) -> dict:
             raise ValueError("soft.top_p must not exceed one")
     if gen["alternative_selection"] == "draft_swap":
         draft = gen["draft"]
+        if type(draft.get("close_thinking", False)) is not bool:
+            raise ValueError("draft.close_thinking must be a boolean")
         child = {**model, **draft["model"], "enable_thinking": False}
         if gen["candidate_count"] != 2:
             raise ValueError("draft swap requires exactly one alternative")

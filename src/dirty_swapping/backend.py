@@ -16,6 +16,8 @@ class DecodeState:
     prompt_length: int
     cache: Any
     next_logits: Any
+    sampler: Any = None
+    generator: Any = None
 
 
 class PromptLimitError(ValueError):
@@ -110,12 +112,44 @@ class TransformersBackend:
         return DecodeState(list(ids), len(ids), cache, output.logits[0, -1].detach())
 
     def fork(self, state: DecodeState) -> DecodeState:
+        generator = None
+        if state.generator is not None:
+            generator = self.torch.Generator(device=self.device)
+            generator.set_state(state.generator.get_state())
         return DecodeState(
             list(state.ids),
             state.prompt_length,
             copy.deepcopy(state.cache),
             state.next_logits.clone(),
+            copy.deepcopy(state.sampler),
+            generator,
         )
+
+    def configure_sampling(self, state: DecodeState, settings: dict, seed: int) -> None:
+        """Use HF's sampling filters with a private, forkable RNG for this trace."""
+        from transformers import (
+            LogitsProcessorList, TemperatureLogitsWarper, TopKLogitsWarper, TopPLogitsWarper,
+        )
+        from .config import validate_sampling
+
+        validate_sampling(settings)
+        state.sampler = LogitsProcessorList([
+            TemperatureLogitsWarper(settings["temperature"]),
+            TopKLogitsWarper(settings["top_k"]),
+            TopPLogitsWarper(settings["top_p"]),
+        ])
+        state.generator = self.torch.Generator(device=self.device).manual_seed(seed)
+
+    def select_token(self, state: DecodeState) -> int:
+        """Consume exactly one main-path draw, or preserve ordinary greedy decoding."""
+        if state.sampler is None:
+            return int(self.torch.argmax(state.next_logits).item())
+        scores = state.next_logits.float().reshape(1, -1)
+        # These three HF filters are history-independent; no full ID transfer is needed.
+        scores = state.sampler(scores.new_empty((1, 0), dtype=self.torch.long), scores)
+        return int(self.torch.multinomial(
+            scores.softmax(-1), 1, generator=state.generator
+        ).item())
 
     def sequence_length(self, state: DecodeState) -> int:
         return len(state.ids)
@@ -217,12 +251,19 @@ class TransformersBackend:
             self.forward_steps += 1
         return state
 
-    def guided_rollout(self, state: DecodeState, prefix: str, total_tokens: int) -> DecodeState:
+    def guided_rollout(
+        self, state: DecodeState, prefix: str, total_tokens: int, *, close_thinking: bool = False
+    ) -> DecodeState:
         """Teacher-force a short alternative step, then finish the equal-length span."""
         tokens = self.tokenizer.encode(prefix, add_special_tokens=False)
         if not tokens or len(tokens) > total_tokens:
             raise ValueError("alternative prefix must fit inside the replacement span")
-        if any(token in self.eos_ids or token == self.think_end_id for token in tokens):
+        if any(token in self.eos_ids for token in tokens):
+            raise ValueError("alternative prefix must not contain EOS")
+        if close_thinking:
+            if tokens[0] != self.think_end_id or tokens.count(self.think_end_id) != 1:
+                raise ValueError("closed donor requires exactly one leading </think> token")
+        elif self.think_end_id in tokens:
             raise ValueError("alternative prefix must stay inside reasoning")
         for token in tokens:
             self.step(state, token)
@@ -232,7 +273,7 @@ class TransformersBackend:
         for _ in range(token_count):
             if state.ids[-1] in self.eos_ids:
                 break
-            token = int(self.torch.argmax(state.next_logits).item())
+            token = self.select_token(state)
             self.step(state, token)
         return state
 

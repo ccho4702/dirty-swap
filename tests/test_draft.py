@@ -43,6 +43,22 @@ class DraftBackend:
 
 
 class DraftTests(unittest.TestCase):
+    def test_closed_draft_retains_exactly_one_leading_marker(self):
+        class SpecialCharacters(Characters):
+            def encode(self, text, add_special_tokens=False):
+                return super().encode(text.replace("</think>", chr(998)))
+
+        main = SimpleNamespace(tokenizer=SpecialCharacters(), eos_ids={999}, think_end_id=998)
+        config = {"prompt": "Briefly.", "max_input_tokens": 128, "max_new_tokens": 64, "close_thinking": True}
+        result = generate_draft(DraftBackend("Long explanation omitted.\nAnswer: B"), main, "Q", config, 16)
+        self.assertEqual(result["reason"], "draft_ready")
+        self.assertEqual(result["prefix"], "</think>\n\nAnswer: B")
+        self.assertTrue(result["donor_closed_thinking"])
+        self.assertTrue(result["truncated"])
+        for body in ("Answer </think> B", chr(999), "Too long for this short cap"):
+            invalid = generate_draft(DraftBackend(body), main, "Q", config, 16)
+            self.assertIsNone(invalid["prefix"])
+
     def setUp(self):
         self.main = SimpleNamespace(tokenizer=Characters(), eos_ids={999}, think_end_id=998)
         self.config = {"prompt": "Solve briefly.", "max_input_tokens": 128, "max_new_tokens": 64}
@@ -116,7 +132,10 @@ class DraftTests(unittest.TestCase):
         self.assertEqual(child["device"], "cpu")
         self.assertEqual(child["dtype"], "float32")
         self.assertFalse(child["enable_thinking"])
-        for key, value in (("max_new_tokens", 100000), ("max_input_tokens", 0), ("prompt", "")):
+        for key, value in (
+            ("max_new_tokens", 100000), ("max_input_tokens", 0), ("prompt", ""),
+            ("close_thinking", "yes"),
+        ):
             bad = copy.deepcopy(spec)
             bad["generation"]["draft"][key] = value
             with self.assertRaises(ValueError):

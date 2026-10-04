@@ -1,0 +1,68 @@
+{
+  "protocol": "dirty-swapping-v1",
+  "model": {
+    "name": "Qwen/Qwen3-4B-Thinking-2507",
+    "revision": "768f209d9ea81521153ed38c47d515654e938aea",
+    "dtype": "bfloat16",
+    "device": "cuda:0",
+    "enable_thinking": true,
+    "threads": 4,
+    "gpu_memory_fraction": 0.95,
+    "prefill_chunk_tokens": 256,
+    "local_files_only": true,
+    "max_context_tokens": 12800
+  },
+  "generation": {
+    "max_input_tokens": 4608,
+    "max_new_tokens": 8192,
+    "seed": 18,
+    "candidate_count": 2,
+    "branch_after_reasoning_tokens": 64,
+    "rollout_tokens": 256,
+    "delay_tokens": 16,
+    "max_swaps_per_trace": 1,
+    "alternative_selection": "draft_swap",
+    "branch_policy": "reasoning_step",
+    "branch_scan_end": 512,
+    "draft": {
+      "model": {
+        "name": "Qwen/Qwen3-4B-Instruct-2507",
+        "revision": "cdbee75f17c01a7cc42f958dc650907174af0554",
+        "device": "cuda:0",
+        "dtype": "bfloat16"
+      },
+      "max_input_tokens": 4608,
+      "max_new_tokens": 512,
+      "download_workers": 2,
+      "prompt": "Produce a brief, supported answer to the question. Use supplied context and options when present. State essential justification and a clear final answer. Avoid unsupported assumptions. Be concise: at most 80 words.",
+      "close_thinking": true
+    },
+    "swap_strength": 1.0,
+    "sampling": {
+      "temperature": 0.6,
+      "top_k": 20,
+      "top_p": 0.95
+    }
+  },
+  "data": {
+    "prompt_limit": 4608,
+    "shuffle_seed": 18,
+    "default_datasets": [
+      "aime25",
+      "hmmt25",
+      "gsm8k",
+      "gpqa"
+    ]
+  },
+  "execution": {
+    "progress_interval_seconds": 15,
+    "case_ids": {
+      "gsm8k": [
+        "gsm8k-train-1292",
+        "gsm8k-train-3522",
+        "gsm8k-train-3331",
+        "gsm8k-train-1202"
+      ]
+    }
+  }
+}

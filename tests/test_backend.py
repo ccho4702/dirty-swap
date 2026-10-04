@@ -47,6 +47,41 @@ class TinyCausalModel:
 
 
 class BackendTests(unittest.TestCase):
+    def test_closed_donor_preserves_main_reasoning_and_suffix(self):
+        backend = TransformersBackend(
+            {"device": "cpu", "threads": 1, "max_context_tokens": 32},
+            model=TinyCausalModel(), tokenizer=TinyTokenizer(),
+        )
+        prefix = backend.prefill({"question": "Q", "answer_format": "math"})
+        plan = SwapPlan(3, 2, 2, 2)
+        baseline = intervene(backend, backend.fork(prefix), plan, enabled=False)
+        with patch.object(backend.tokenizer, "encode", return_value=[98, 8]):
+            edited = intervene(
+                backend, backend.fork(prefix), plan, enabled=True, selection="guided_swap",
+                alternative_prefix="</think>\nAnswer", close_thinking=True,
+            )
+        self.assertTrue(edited.swapped)
+        self.assertEqual(edited.state.ids, baseline.state.ids)
+        self.assertIsNone(backend.reasoning_end(edited.state))
+        self.assertEqual(edited.alternative_ids, [98, 8])
+        self.assertEqual(edited.state.cache.layers[0].keys.flatten().tolist(), [1, 1, 1, 98, 8, 7, 7])
+        backend.advance(baseline.state, 2)
+        backend.advance(edited.state, 2)
+        self.assertEqual(baseline.state.ids[-2:], [7, 7])
+        self.assertEqual(edited.state.ids[-2:], [7, 6])
+
+    def test_closed_donor_validates_marker_and_eos_before_writing(self):
+        backend = TransformersBackend(
+            {"device": "cpu", "threads": 1, "max_context_tokens": 32},
+            model=TinyCausalModel(), tokenizer=TinyTokenizer(),
+        )
+        prefix = backend.prefill({"question": "Q", "answer_format": "math"})
+        for tokens in ([8, 98], [98, 98], [98, 99], [8, 9]):
+            with self.subTest(tokens=tokens), patch.object(backend.tokenizer, "encode", return_value=tokens):
+                with self.assertRaises(ValueError):
+                    backend.guided_rollout(prefix, "invalid", 2, close_thinking=True)
+                self.assertEqual(prefix.ids, [1, 1, 1])
+
     def test_same_probe_policy_runs_for_math_and_choice_without_task_gates(self):
         spec = load_spec()
         spec["model"].update(max_context_tokens=64, device="cpu", dtype="float32")

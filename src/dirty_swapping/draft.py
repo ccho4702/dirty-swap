@@ -34,7 +34,8 @@ def generate_draft(drafter, main, question: str, config: dict, span_cap: int) ->
     """Consume only the question; completion and span checks are independent of answer type."""
     drafter.synchronize()
     started = time.monotonic()
-    result = {"prefix": None, "reason": "draft_incomplete"}
+    close_thinking = config.get("close_thinking", False)
+    result = {"prefix": None, "reason": "draft_incomplete", "donor_closed_thinking": close_thinking}
     try:
         state = drafter.prefill_text(
             config["prompt"] + "\n\nProblem:\n" + question,
@@ -53,7 +54,7 @@ def generate_draft(drafter, main, question: str, config: dict, span_cap: int) ->
         if drafter.finished(state) and text.strip():
             lines = text.strip().splitlines()
             while lines:
-                prefix = "\n" + "\n".join(lines)
+                prefix = ("</think>\n\n" if close_thinking else "\n") + "\n".join(lines)
                 tokens = main.tokenizer.encode(prefix, add_special_tokens=False)
                 if len(tokens) <= span_cap:
                     break
@@ -62,13 +63,16 @@ def generate_draft(drafter, main, question: str, config: dict, span_cap: int) ->
                 prefix, tokens = "", []
             if not tokens:
                 result["reason"] = "draft_span_limit"
-            elif any(token in main.eos_ids or token == main.think_end_id for token in tokens):
+            elif any(token in main.eos_ids for token in tokens) or (
+                (tokens[0] != main.think_end_id or tokens.count(main.think_end_id) != 1)
+                if close_thinking else main.think_end_id in tokens
+            ):
                 result["reason"] = "draft_special_token"
             else:
                 result.update(
                     prefix=prefix,
                     rollout_tokens=len(tokens),
-                    truncated=prefix.strip() != text.strip(),
+                    truncated="\n".join(lines).strip() != text.strip(),
                     reason="draft_ready",
                 )
         elif drafter.finished(state):
